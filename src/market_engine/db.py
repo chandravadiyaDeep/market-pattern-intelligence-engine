@@ -90,6 +90,25 @@ def init_db(db_path: str | Path | None = None) -> None:
             outcome_at TEXT
         );
         CREATE INDEX IF NOT EXISTS idx_predictions_as_of ON predictions(as_of);
+        CREATE TABLE IF NOT EXISTS market_bars (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            symbol TEXT NOT NULL,
+            session_date TEXT NOT NULL,
+            open REAL NOT NULL CHECK(open > 0),
+            high REAL NOT NULL CHECK(high > 0),
+            low REAL NOT NULL CHECK(low > 0),
+            close REAL NOT NULL CHECK(close > 0),
+            adjusted_close REAL CHECK(adjusted_close IS NULL OR adjusted_close > 0),
+            volume REAL CHECK(volume IS NULL OR volume >= 0),
+            source_name TEXT NOT NULL,
+            retrieved_at TEXT NOT NULL,
+            UNIQUE(symbol, session_date, source_name),
+            CHECK(high >= low),
+            CHECK(high >= open AND high >= close),
+            CHECK(low <= open AND low <= close)
+        );
+        CREATE INDEX IF NOT EXISTS idx_market_bars_symbol_date
+            ON market_bars(symbol, session_date);
         CREATE TABLE IF NOT EXISTS paper_orders (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             symbol TEXT NOT NULL,
