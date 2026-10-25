@@ -31,6 +31,17 @@ uvicorn market_engine.api:app --reload
 
 API docs are available at `http://127.0.0.1:8000/docs`.
 
+## Importing event history
+
+Use the CSV importer to load a curated, source-checked event timeline before adding automated news feeds:
+
+```powershell
+market-engine import-events --file .\\examples\\events_template.csv --dry-run
+market-engine import-events --file .\\your_events.csv
+```
+
+See [CSV import instructions](docs/CSV_IMPORT.md). The included example is synthetic only.
+
 ## Current implementation
 
 - FastAPI service and SQLite-first local development database.
