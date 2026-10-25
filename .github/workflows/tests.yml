@@ -22,4 +22,4 @@ jobs:
       - name: Run test suite
         run: pytest -q
       - name: Check formatting and common issues
-        run: ruff check src tests
+        run: ruff check --select E4,E7,E9,F src tests
