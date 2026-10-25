@@ -52,6 +52,12 @@ market-engine fetch-feeds --dry-run
 # Fetch configured RSS feeds and store source metadata
 market-engine fetch-feeds
 
+# Validate the synthetic example (not real market data)
+market-engine import-prices --file .\\examples\\sample_prices.csv --source synthetic-demo --dry-run
+
+# Import an authorized provider's daily OHLCV CSV
+market-engine import-prices --file .\\data\\licensed_prices.csv --source your-provider
+
 # Start API
 uvicorn market_engine.api:app --reload
 ```
@@ -67,6 +73,8 @@ Maintain source links in [resources/RESEARCH_SOURCES.md](resources/RESEARCH_SOUR
 - `GET /health`
 - `POST /sources` and `GET /sources`
 - `GET /pipeline/feeds` (configuration only; does not trigger a network fetch)
+- `GET /market-bars`
+- `GET /market-bars/{symbol}/features`
 - `POST /events` and `GET /events`
 - `POST /predictions` and `GET /predictions`
 - `POST /predictions/{id}/outcome`
@@ -92,4 +100,4 @@ Begin with small manually curated datasets or sources whose terms permit the int
 
 ## Important limitations
 
-The repository now includes a configurable RSS/Atom metadata-ingestion pipeline, but it does **not yet** include a dedicated NSE/BSE filings connector, a historical Nifty 50 constituent loader, a licensed historical price feed, automatic event extraction and verification, a validated corporate-event prediction model, or a complete return-aware walk-forward strategy simulator. The initial enabled feeds are general news feeds, not a complete or guaranteed Nifty 50 feed. The market-feature utilities are not yet connected to a persisted historical price store.
+The repository now includes a configurable RSS/Atom metadata-ingestion pipeline and a validated CSV importer for daily OHLCV history. It does **not yet** include a dedicated NSE/BSE filings connector, a historical Nifty 50 constituent loader, a licensed live or historical price feed, automatic event extraction and verification, a validated corporate-event prediction model, or a complete return-aware walk-forward strategy simulator. The included sample prices are synthetic only. The initial enabled feeds are general news feeds, not a complete or guaranteed Nifty 50 feed. The market-feature utilities are not yet connected to a persisted historical price store.
