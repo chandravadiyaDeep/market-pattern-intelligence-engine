@@ -1,8 +1,10 @@
 """FastAPI endpoints for local research workflows."""
-from fastapi import FastAPI, HTTPException
+from datetime import datetime
+from fastapi import FastAPI, HTTPException, Query
 from .db import connect, init_db, now_iso, row_to_dict
 from .models import EventIn, PredictionIn, PaperOrderIn, SourceDocumentIn
-from .paper import create_paper_order
+from .paper import create_paper_order, simulate_fill
+from .evaluation import evaluate_binary_probabilities
 
 app = FastAPI(
     title="Market Pattern Intelligence Engine",
@@ -108,6 +110,69 @@ def list_predictions(limit: int = 100) -> dict:
     with connect() as conn:
         rows = conn.execute("SELECT * FROM predictions ORDER BY as_of DESC LIMIT ?", (limit,)).fetchall()
     return {"items": [row_to_dict(row) for row in rows], "count": len(rows)}
+
+
+@app.post("/predictions/{prediction_id}/outcome")
+def resolve_prediction(
+    prediction_id: int,
+    outcome: int = Query(..., ge=0, le=1),
+    outcome_at: datetime = Query(...),
+) -> dict:
+    """Record a resolved outcome once; preserve the original forecast unchanged."""
+    with connect() as conn:
+        row = conn.execute("SELECT * FROM predictions WHERE id=?", (prediction_id,)).fetchone()
+        if row is None:
+            raise HTTPException(status_code=404, detail="Prediction not found")
+        if row["outcome"] is not None:
+            raise HTTPException(status_code=409, detail="Outcome already recorded and is immutable")
+        forecast_at = datetime.fromisoformat(row["as_of"])
+        comparable_outcome_at = outcome_at
+        if forecast_at.tzinfo is None and comparable_outcome_at.tzinfo is not None:
+            forecast_at = forecast_at.replace(tzinfo=comparable_outcome_at.tzinfo)
+        elif forecast_at.tzinfo is not None and comparable_outcome_at.tzinfo is None:
+            comparable_outcome_at = comparable_outcome_at.replace(tzinfo=forecast_at.tzinfo)
+        if comparable_outcome_at < forecast_at:
+            raise HTTPException(status_code=422, detail="Outcome time cannot precede forecast time")
+        conn.execute("UPDATE predictions SET outcome=?, outcome_at=? WHERE id=?",
+                     (outcome, outcome_at.isoformat(), prediction_id))
+        return row_to_dict(conn.execute("SELECT * FROM predictions WHERE id=?",
+                                        (prediction_id,)).fetchone())
+
+
+@app.get("/evaluation/summary")
+def evaluation_summary() -> dict:
+    """Evaluate resolved forecasts using proper probability scoring rules."""
+    with connect() as conn:
+        rows = conn.execute(
+            "SELECT probability,outcome FROM predictions WHERE outcome IS NOT NULL"
+        ).fetchall()
+    metrics = evaluate_binary_probabilities(
+        [float(row["probability"]) for row in rows],
+        [int(row["outcome"]) for row in rows],
+    )
+    return {
+        "observations": metrics.observations,
+        "brier_score": metrics.brier_score,
+        "log_loss": metrics.log_loss,
+        "accuracy_at_half": metrics.accuracy_at_half,
+        "note": "Metrics are descriptive; interpret only with sufficient out-of-sample observations.",
+    }
+
+
+@app.post("/paper-orders/{order_id}/fill")
+def fill_paper_order(
+    order_id: int,
+    fill_price: float = Query(..., gt=0),
+    fill_time: datetime = Query(...),
+) -> dict:
+    """Record a simulated fill only; this endpoint never contacts a broker."""
+    try:
+        simulate_fill(order_id, fill_price, fill_time)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    with connect() as conn:
+        row = conn.execute("SELECT * FROM paper_orders WHERE id=?", (order_id,)).fetchone()
+        return row_to_dict(row)
 
 
 @app.post("/paper-orders", status_code=201)
