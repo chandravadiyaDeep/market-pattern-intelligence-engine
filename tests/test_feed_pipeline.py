@@ -99,3 +99,16 @@ def test_non_https_feed_url_is_rejected(tmp_path: Path):
     )
     with pytest.raises(ValueError, match="Only HTTPS"):
         ingest_feeds(config, fetcher=lambda url: RSS, delay_seconds=0)
+
+
+def test_duplicate_feed_ids_are_rejected_before_fetch(tmp_path: Path):
+    """Duplicate IDs fail fast so feed config remains auditable."""
+    config = tmp_path / "duplicate.yaml"
+    config.write_text(
+        "feeds:\\n"
+        "  - id: same\\n    url: https://example.com/a.xml\\n"
+        "  - id: same\\n    url: https://example.com/b.xml\\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="Duplicate feed id"):
+        ingest_feeds(config, fetcher=lambda url: RSS, delay_seconds=0)
