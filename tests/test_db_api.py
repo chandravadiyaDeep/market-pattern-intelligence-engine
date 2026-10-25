@@ -101,3 +101,28 @@ def test_sources_endpoint_and_feed_registry(tmp_path, monkeypatch):
     assert feeds.status_code == 200
     assert feeds.json()["count"] >= 2
     assert any(item["enabled"] for item in feeds.json()["items"])
+
+
+def test_market_bars_and_trailing_features(tmp_path, monkeypatch):
+    """Imported price history can be browsed and converted to trailing features."""
+    db_file = tmp_path / "market-bars.sqlite3"
+    monkeypatch.setattr(api_module, "connect", lambda: connect(db_file))
+    init_db(db_file)
+    with connect(db_file) as conn:
+        for day in range(1, 8):
+            conn.execute(
+                """INSERT INTO market_bars
+                (symbol,session_date,open,high,low,close,adjusted_close,volume,source_name,retrieved_at)
+                VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                ("TCS", f"2026-10-{day:02d}", 100 + day, 102 + day, 99 + day,
+                 101 + day, 101 + day, 1000, "test", "2026-10-25T00:00:00+00:00"),
+            )
+    client = TestClient(app)
+    bars = client.get("/market-bars?symbol=TCS")
+    assert bars.status_code == 200
+    assert bars.json()["count"] == 7
+    features = client.get("/market-bars/TCS/features?momentum_windows=5&volatility_window=3")
+    assert features.status_code == 200
+    assert features.json()["count"] == 7
+    assert features.json()["items"][4]["momentum_5"] is None
+    assert features.json()["items"][5]["momentum_5"] is not None
