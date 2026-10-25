@@ -26,6 +26,7 @@ Open the API explorer at http://127.0.0.1:8000/docs.
 - Source registry that retains publication, first-seen and retrieval timestamps.
 - Structured event timeline with evidence confidence, materiality and verification status.
 - CSV import for manually curated or otherwise permitted event datasets.
+- RSS/Atom ingestion pipeline with dry-run mode, timestamp normalization, source metadata storage and duplicate detection.
 - Descriptive event-frequency exploration over a lookback window.
 - Transparent smoothed historical base-rate estimates.
 - Point-in-time market features: daily returns, trailing momentum, annualized realized volatility and benchmark-relative returns.
@@ -45,11 +46,21 @@ market-engine import-events --file .\data\sample_events.csv --dry-run
 # Import a CSV after reviewing the dry-run report
 market-engine import-events --file .\data\sample_events.csv
 
+# Fetch configured RSS feeds without writing to the database
+market-engine fetch-feeds --dry-run
+
+# Fetch configured RSS feeds and store source metadata
+market-engine fetch-feeds
+
 # Start API
 uvicorn market_engine.api:app --reload
 ```
 
 CSV required columns: `symbol,event_type,title,summary`. Optional columns: `event_at,disclosed_at,evidence_confidence,materiality,status`. Timestamp strings should include an explicit UTC offset. Imported events are not automatically fact-checked.
+
+## Research source links
+
+Maintain source links in [resources/RESEARCH_SOURCES.md](resources/RESEARCH_SOURCES.md). The machine-readable registry is [config/research_sources.yaml](config/research_sources.yaml). Only entries under feeds with enabled set to true are fetched by the RSS pipeline. The initial feeds are general news feeds, not a complete or verified Nifty 50 event feed.
 
 ## API routes
 
