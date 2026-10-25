@@ -7,8 +7,14 @@ from datetime import datetime, timezone
 
 
 def database_path() -> str:
-    """Resolve database path from supported environment variables."""
-    return os.getenv("MPIE_DATABASE_PATH", os.getenv("MARKET_ENGINE_DB", "./data/mpie.sqlite3"))
+    """Resolve the DB path from environment variables or the local .env settings file."""
+    direct_value = os.getenv("MPIE_DATABASE_PATH") or os.getenv("MARKET_ENGINE_DB")
+    if direct_value:
+        return direct_value
+    # Pydantic Settings reads the optional .env file without exposing its contents.
+    from .config import settings
+
+    return settings.database_path
 
 
 def now_iso() -> str:
