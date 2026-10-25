@@ -125,6 +125,66 @@ def list_events(symbol: str | None = None, limit: int = 100) -> dict:
     return {"items": [row_to_dict(row) for row in rows], "count": len(rows)}
 
 
+@app.get("/market-bars")
+def list_market_bars(symbol: str | None = None, limit: int = 500) -> dict:
+    """Browse imported daily OHLCV records, newest first."""
+    if not 1 <= limit <= 5000:
+        raise HTTPException(status_code=422, detail="limit must be 1..5000")
+    with connect() as conn:
+        if symbol:
+            rows = conn.execute(
+                "SELECT * FROM market_bars WHERE symbol=? ORDER BY session_date DESC LIMIT ?",
+                (symbol.strip().upper(), limit),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM market_bars ORDER BY session_date DESC LIMIT ?", (limit,)
+            ).fetchall()
+    return {"items": [row_to_dict(row) for row in rows], "count": len(rows)}
+
+
+@app.get("/market-bars/{symbol}/features")
+def market_bar_features(
+    symbol: str,
+    momentum_windows: str = "5,20",
+    volatility_window: int = 20,
+    limit: int = 2000,
+) -> dict:
+    """Calculate trailing features from imported prices using no future bars."""
+    from .market_features import PriceBar, build_market_features
+
+    if not 1 <= limit <= 5000:
+        raise HTTPException(status_code=422, detail="limit must be 1..5000")
+    try:
+        windows = tuple(int(value.strip()) for value in momentum_windows.split(",") if value.strip())
+        if not windows:
+            raise ValueError("At least one momentum window is required")
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail="momentum_windows must be comma-separated positive integers") from exc
+    with connect() as conn:
+        rows = conn.execute(
+            """SELECT session_date, COALESCE(adjusted_close, close) AS feature_close
+            FROM market_bars WHERE symbol=? ORDER BY session_date DESC LIMIT ?""",
+            (symbol.strip().upper(), limit),
+        ).fetchall()
+    bars = [PriceBar(row["session_date"], float(row["feature_close"])) for row in reversed(rows)]
+    if not bars:
+        return {"symbol": symbol.strip().upper(), "count": 0, "items": []}
+    try:
+        features = build_market_features(
+            bars, momentum_windows=windows, volatility_window=volatility_window
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {
+        "symbol": symbol.strip().upper(),
+        "count": len(features),
+        "price_basis": "adjusted_close_when_available_else_close",
+        "items": features,
+        "note": "Trailing features only; no future prices are used. Validate data adjustments and trading calendars.",
+    }
+
+
 @app.post("/predictions", status_code=201)
 def save_prediction(prediction: PredictionIn) -> dict:
     """Append a forecast; outcome is stored separately when known."""
