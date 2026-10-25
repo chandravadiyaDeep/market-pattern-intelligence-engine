@@ -1,70 +1,82 @@
 # Market Pattern Intelligence Engine
 
-A personal research platform for Nifty 50 corporate-event intelligence, market-impact analysis, historical pattern exploration, walk-forward backtesting, and paper trading.
+Personal research software for studying how corporate events and evolving company signals may relate to future outcomes across the Nifty 50 universe.
 
-> **Research software only.** V1 does not place live orders and does not provide guaranteed forecasts or investment advice. Initial models are baselines and must be evaluated out of sample before any strategy is trusted.
+> **Research and paper simulation only.** There is no live broker integration. Baseline probability functions are not validated trading models and do not guarantee future performance.
 
-## V1 goals
-
-- Maintain source-linked, timestamp-aware corporate event records.
-- Explore event frequency, sequences, and similar historical cases.
-- Estimate explicitly defined event probabilities using transparent baselines.
-- Evaluate forecast calibration and market outcomes without look-ahead leakage.
-- Simulate paper orders with explicit costs and risk limits.
-
-## Quick start
+## Quick start — Windows PowerShell
 
 Requires Python 3.11 or newer.
 
 ```powershell
-# Windows PowerShell, from the repository root
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 python -m pip install -e ".[dev]"
 Copy-Item .env.example .env
-pytest
 market-engine init-db
-market-engine demo
+pytest -q
 uvicorn market_engine.api:app --reload
 ```
 
-API docs are available at `http://127.0.0.1:8000/docs`.
+Open the API explorer at http://127.0.0.1:8000/docs.
 
-## Importing event history
+## Current capabilities
 
-Use the CSV importer to load a curated, source-checked event timeline before adding automated news feeds:
+- Source registry that retains publication, first-seen and retrieval timestamps.
+- Structured event timeline with evidence confidence, materiality and verification status.
+- CSV import for manually curated or otherwise permitted event datasets.
+- Descriptive event-frequency exploration over a lookback window.
+- Transparent smoothed historical base-rate estimates.
+- Brier score, log loss and chronological train/test splitting utilities.
+- Timestamped forecasts with outcomes recorded separately and immutable once resolved.
+- Paper-order ledger with explicitly simulated fills; no broker or live order placement.
+
+## Useful commands
 
 ```powershell
-market-engine import-events --file .\\examples\\events_template.csv --dry-run
-market-engine import-events --file .\\your_events.csv
+# Initialize local SQLite database
+market-engine init-db
+
+# Validate a CSV without writing it
+market-engine import-events --file .\data\sample_events.csv --dry-run
+
+# Import a CSV after reviewing the dry-run report
+market-engine import-events --file .\data\sample_events.csv
+
+# Start API
+uvicorn market_engine.api:app --reload
 ```
 
-See [CSV import instructions](docs/CSV_IMPORT.md). The included example is synthetic only.
+CSV required columns: `symbol,event_type,title,summary`. Optional columns: `event_at,disclosed_at,evidence_confidence,materiality,status`. Timestamp strings should include an explicit UTC offset. Imported events are not automatically fact-checked.
 
-## Current implementation
+## API routes
 
-- FastAPI service and SQLite-first local development database.
-- Event and prediction data models.
-- Baseline event probability and market-impact helpers.
-- Brier score, log loss, and calibration summaries.
-- Pattern-window and event-sequence helpers.
-- Simulated paper orders only; no broker integration.
-- Source registry and data collection guidance.
-
-## Data policy
-
-Start with small, manually curated or otherwise permitted datasets. Verify the provider's terms before automated collection, bulk download, or redistribution. Never commit API keys, licensed datasets, or private credentials. See [data source notes](docs/DATA_SOURCES.md).
+- `GET /health`
+- `POST /sources`
+- `POST /events` and `GET /events`
+- `POST /predictions` and `GET /predictions`
+- `POST /predictions/{id}/outcome`
+- `GET /evaluation/summary`
+- `GET /patterns/event-counts`
+- `POST /paper-orders` and `GET /paper-orders`
+- `POST /paper-orders/{id}/fill` (simulated only)
 
 ## Research safeguards
 
-1. Store event time, publication time, first-seen time, and prediction time separately.
-2. Forecast only from information available at prediction time.
-3. Use chronological/walk-forward splits; do not randomly mix future and past.
-4. Use historical index constituents for historical universe tests to reduce survivorship bias.
-5. Save forecasts before outcomes and never overwrite the original prediction.
-6. Include transaction costs, realistic execution timing, and corporate actions in strategy tests.
+1. Keep event time, publication time, first-seen time, retrieval time and forecast time separate.
+2. Use only information available at the historical forecast timestamp.
+3. Evaluate chronologically; never randomly mix future and past observations.
+4. Use historical Nifty 50 constituent membership for historical universe tests to avoid survivorship bias.
+5. Save forecasts before outcomes; do not rewrite outcomes after they have been recorded.
+6. Model next eligible execution prices, corporate actions, brokerage, taxes, exchange charges, slippage and liquidity.
+7. Treat LLM-generated extraction as a claim that needs evidence, not as a verified fact or calibrated probability.
+8. Never commit API keys, credentials, or licensed data dumps.
 
-## Development plan
+## Data source policy
 
-See [architecture](docs/ARCHITECTURE.md), [data sources](docs/DATA_SOURCES.md), and [evaluation protocol](docs/EVALUATION.md). V1 begins with reliable historical records and baseline evaluation; advanced models and live trading are intentionally postponed.
+Begin with small manually curated datasets or sources whose terms permit the intended use. Verify current provider terms before automated collection, bulk downloading or redistribution. See [data source notes](docs/DATA_SOURCES.md).
+
+## Important limitations
+
+The repository does **not yet** include an automated NSE/BSE data connector, a historical Nifty 50 constituent loader, a validated corporate-event prediction model, or a complete return-aware walk-forward strategy simulator. Those are next milestones. V1 should first establish reliable timestamps, data provenance, tests, and out-of-sample evaluation.
