@@ -1,0 +1,7 @@
+# SYNTHETIC EXAMPLE ONLY — not real market prices. Remove this comment line before importing, or use the header/data rows below in a new CSV.
+symbol,date,open,high,low,close,adjusted_close,volume,source_name
+TCS,2026-10-19,100,104,99,103,103,1000,synthetic-demo
+TCS,2026-10-20,103,106,101,104,104,1200,synthetic-demo
+TCS,2026-10-21,104,108,103,107,107,1500,synthetic-demo
+TCS,2026-10-22,107,109,104,105,105,1300,synthetic-demo
+TCS,2026-10-23,105,110,104,109,109,1600,synthetic-demo
