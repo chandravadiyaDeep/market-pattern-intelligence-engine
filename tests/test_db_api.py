@@ -86,3 +86,15 @@ def test_prediction_outcome_is_recorded_once(tmp_path, monkeypatch):
         params={"outcome": 1, "outcome_at": "2026-01-09T10:00:00+00:00"},
     )
     assert repeated.status_code == 409
+
+
+def test_sources_endpoint_and_feed_registry():
+    """API exposes stored source metadata and config without triggering a fetch."""
+    client = TestClient(app)
+    sources = client.get("/sources")
+    assert sources.status_code == 200
+    assert "items" in sources.json()
+    feeds = client.get("/pipeline/feeds")
+    assert feeds.status_code == 200
+    assert feeds.json()["count"] >= 2
+    assert any(item["enabled"] for item in feeds.json()["items"])
