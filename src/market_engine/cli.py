@@ -1,10 +1,12 @@
-"""Command-line tools for local setup, CSV import, and a synthetic demo."""
+"""Command-line tools for local setup, event import, RSS ingestion and synthetic demo."""
 import argparse
 import json
+
 from .db import init_db
 from .forecasting import estimate_event_probability
 from .evaluation import evaluate_binary_probabilities
 from .importers import import_events_csv
+from .feed_pipeline import ingest_feeds
 
 
 def run_demo() -> None:
@@ -22,9 +24,17 @@ def run_demo() -> None:
 def main() -> None:
     """CLI entry point."""
     parser = argparse.ArgumentParser(description="Market Pattern Intelligence Engine")
-    parser.add_argument("command", choices=["init-db", "demo", "import-events"])
+    parser.add_argument(
+        "command",
+        choices=["init-db", "demo", "import-events", "fetch-feeds"],
+    )
     parser.add_argument("--file", help="CSV path required for import-events")
-    parser.add_argument("--dry-run", action="store_true", help="Validate CSV without writing rows")
+    parser.add_argument(
+        "--config",
+        default="config/research_sources.yaml",
+        help="YAML research source registry (default: config/research_sources.yaml)",
+    )
+    parser.add_argument("--dry-run", action="store_true", help="Validate/fetch without database writes")
     args = parser.parse_args()
 
     if args.command == "init-db":
@@ -32,12 +42,18 @@ def main() -> None:
         print("Database initialized.")
     elif args.command == "demo":
         run_demo()
-    else:
+    elif args.command == "import-events":
         if not args.file:
             parser.error("--file is required when command is import-events")
         init_db()
         result = import_events_csv(args.file, dry_run=args.dry_run)
         print(json.dumps(result, indent=2))
+    else:
+        init_db()
+        result = ingest_feeds(config_path=args.config, dry_run=args.dry_run)
+        print(json.dumps(result, indent=2))
+        if result["feeds_failed"]:
+            raise SystemExit(1)
 
 
 if __name__ == "__main__":
