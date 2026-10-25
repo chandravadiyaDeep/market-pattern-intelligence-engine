@@ -6,7 +6,7 @@ from market_engine.importers import import_events_csv
 
 def write_csv(path, rows):
     """Write a small CSV fixture with a stable set of columns."""
-    fields = ["symbol", "event_type", "title", "summary", "disclosed_at", "status"]
+    fields = ["symbol", "event_type", "title", "summary", "disclosed_at", "status", "source_url", "source_type"]
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fields)
         writer.writeheader()
@@ -37,7 +37,7 @@ def test_importer_validates_then_imports_and_skips_duplicates(tmp_path):
     assert first["valid_rows"] == 1
     assert second["duplicates_skipped"] == 1
     with connect(db_path) as conn:
-        assert conn.execute("SELECT COUNT(*) FROM events").fetchone()[0] == 1
+        assert conn.execute("SELECT COUNT(*) FROM events").fetchone()[0] == 1\n        assert conn.execute("SELECT COUNT(*) FROM source_documents").fetchone()[0] == 1\n        assert conn.execute("SELECT source_id FROM events").fetchone()[0] == 1
 
 
 def test_importer_reports_missing_columns(tmp_path):
