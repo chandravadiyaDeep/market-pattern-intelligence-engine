@@ -88,8 +88,11 @@ def test_prediction_outcome_is_recorded_once(tmp_path, monkeypatch):
     assert repeated.status_code == 409
 
 
-def test_sources_endpoint_and_feed_registry():
+def test_sources_endpoint_and_feed_registry(tmp_path, monkeypatch):
     """API exposes stored source metadata and config without triggering a fetch."""
+    db_file = tmp_path / "sources.sqlite3"
+    monkeypatch.setattr(api_module, "connect", lambda: connect(db_file))
+    init_db(db_file)
     client = TestClient(app)
     sources = client.get("/sources")
     assert sources.status_code == 200
