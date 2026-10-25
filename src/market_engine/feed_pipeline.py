@@ -131,11 +131,16 @@ def load_feed_config(config_path: str | Path = DEFAULT_CONFIG) -> dict[str, Any]
     feeds = config.get("feeds")
     if not isinstance(feeds, list):
         raise ValueError("Feed configuration must contain a 'feeds' list")
+    seen_ids: set[str] = set()
     for feed in feeds:
         if not isinstance(feed, dict) or not feed.get("id") or not feed.get("url"):
             raise ValueError("Each feed needs non-empty 'id' and 'url' fields")
+        feed_id = str(feed["id"])
+        if feed_id in seen_ids:
+            raise ValueError(f"Duplicate feed id: {feed_id}")
+        seen_ids.add(feed_id)
         if not str(feed["url"]).startswith("https://"):
-            raise ValueError(f"Only HTTPS feed URLs are permitted: {feed['id']}")
+            raise ValueError(f"Only HTTPS feed URLs are permitted: {feed_id}")
     return config
 
 
