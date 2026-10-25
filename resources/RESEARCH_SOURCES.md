@@ -45,7 +45,7 @@ This is the human-maintained directory of sources for the Market Pattern Intelli
 
 ## 4. Starter RSS ingestion
 
-The code pipeline fetches only URLs in the `feeds` list in `config/research_sources.yaml` with `enabled: true`. At initial setup, the enabled feeds are Business Standard Latest and Economic Times Top Stories. They are general news feeds, not a guaranteed complete feed of Nifty 50 company announcements.
+The code pipeline fetches only URLs in the `feeds` list in `config/research_sources.yaml` with `enabled: true`. At initial setup, enabled feeds include NSE announcements, corporate actions, board meetings and financial results, plus market-specific RSS feeds from Business Standard and The Economic Times. Feed availability and coverage can change; they are not a guaranteed complete Nifty 50 feed.
 
 The NSE RSS directory is listed as a reference-only entry because its page contains links to individual feeds. Open the official directory, choose the exact RSS feed that fits your use, confirm the feed URL and terms, then add that URL as a new feed entry before enabling it. Do not set the directory landing page itself as a feed.
 
@@ -61,7 +61,7 @@ Then persist metadata:
 market-engine fetch-feeds
 ```
 
-The pipeline stores the headline, source/article URL, publication timestamp where available, first-seen time, retrieval time, a content hash and a short feed-provided excerpt. It does not download full article pages, automatically classify a headline as a corporate event, or generate a prediction.
+The pipeline stores the headline, source/article URL, publication timestamp where available, first-seen time, retrieval time, a content hash and a short feed-provided excerpt. It does not download full article pages, automatically classify a headline as a corporate event, or generate a prediction. The Economic Times states its RSS feeds are for personal, non-commercial use and restricts retaining or redistributing feed content; follow its current terms and do not use that feed in a commercial product without permission.
 
 ## 5. Data quality rules
 
