@@ -126,3 +126,15 @@ def test_market_bars_and_trailing_features(tmp_path, monkeypatch):
     assert features.json()["count"] == 7
     assert features.json()["items"][4]["momentum_5"] is None
     assert features.json()["items"][5]["momentum_5"] is not None
+
+
+def test_research_sources_endpoint_returns_link_catalog():
+    """Research links are available through the API without fetching those sites."""
+    client = TestClient(app)
+    response = client.get("/research-sources")
+    assert response.status_code == 200
+    items = response.json()["items"]
+    assert response.json()["count"] >= 15
+    assert any(item["id"] == "nse_announcements" for item in items)
+    assert any(item["id"] == "google_trends" for item in items)
+    assert all(item["url"].startswith("https://") for item in items)
