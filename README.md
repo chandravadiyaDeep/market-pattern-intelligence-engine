@@ -28,6 +28,7 @@ Open the API explorer at http://127.0.0.1:8000/docs.
 - CSV import for manually curated or otherwise permitted event datasets.
 - Descriptive event-frequency exploration over a lookback window.
 - Transparent smoothed historical base-rate estimates.
+- Point-in-time market features: daily returns, trailing momentum, annualized realized volatility and benchmark-relative returns.
 - Brier score, log loss and chronological train/test splitting utilities.
 - Timestamped forecasts with outcomes recorded separately and immutable once resolved.
 - Paper-order ledger with explicitly simulated fills; no broker or live order placement.
