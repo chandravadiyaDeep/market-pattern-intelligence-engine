@@ -128,3 +128,40 @@ def list_paper_orders(limit: int = 100) -> dict:
     with connect() as conn:
         rows = conn.execute("SELECT * FROM paper_orders ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
     return {"items": [row_to_dict(row) for row in rows], "count": len(rows)}
+
+
+@app.get("/patterns/event-counts")
+def event_pattern_counts(lookback_days: int = 90, symbol: str | None = None) -> dict:
+    """Summarize disclosed event frequencies in a point-in-time window.
+
+    Counts are descriptive only: frequency does not imply causation or predict an outcome.
+    Events without a disclosure timestamp are excluded because their availability is unknown.
+    """
+    from datetime import datetime, timedelta, timezone
+    from .patterns import describe_pattern, summarize_event_counts
+
+    if not 1 <= lookback_days <= 3650:
+        raise HTTPException(status_code=422, detail="lookback_days must be between 1 and 3650")
+    as_of = datetime.now(timezone.utc)
+    cutoff = as_of - timedelta(days=lookback_days)
+    query = "SELECT event_type, disclosed_at FROM events WHERE disclosed_at IS NOT NULL AND disclosed_at >= ? AND disclosed_at <= ?"
+    params: list = [cutoff.isoformat(), as_of.isoformat()]
+    if symbol:
+        query += " AND symbol = ?"
+        params.append(symbol.strip().upper())
+    query += " ORDER BY disclosed_at DESC"
+    with connect() as conn:
+        rows = conn.execute(query, params).fetchall()
+    counts = summarize_event_counts(
+        [{"event_type": row["event_type"], "disclosed_at": row["disclosed_at"]} for row in rows],
+        lookback_days=lookback_days,
+        as_of=as_of,
+    )
+    return {
+        "as_of": as_of.isoformat(),
+        "lookback_days": lookback_days,
+        "symbol": symbol.strip().upper() if symbol else None,
+        "event_count": sum(counts.values()),
+        "by_event_type": describe_pattern(counts),
+        "interpretation": "descriptive_frequency_only_not_a_forecast",
+    }
