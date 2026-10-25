@@ -25,6 +25,46 @@ def health() -> dict[str, str]:
     return {"status": "ok", "mode": "research_only", "timestamp": now_iso()}
 
 
+@app.get("/sources")
+def list_sources(source_type: str | None = None, limit: int = 100) -> dict:
+    """Browse ingested source metadata without downloading linked article pages."""
+    if not 1 <= limit <= 500:
+        raise HTTPException(status_code=422, detail="limit must be 1..500")
+    with connect() as conn:
+        if source_type:
+            rows = conn.execute(
+                "SELECT * FROM source_documents WHERE source_type=? ORDER BY retrieved_at DESC LIMIT ?",
+                (source_type, limit),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM source_documents ORDER BY retrieved_at DESC LIMIT ?", (limit,)
+            ).fetchall()
+    return {"items": [row_to_dict(row) for row in rows], "count": len(rows)}
+
+
+@app.get("/pipeline/feeds")
+def list_configured_feeds() -> dict:
+    """Show configured feed URLs and enabled state without triggering network requests."""
+    from .feed_pipeline import load_feed_config
+
+    try:
+        config = load_feed_config()
+    except (FileNotFoundError, ValueError) as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    feeds = [
+        {
+            "id": feed["id"],
+            "name": feed.get("name", feed["id"]),
+            "url": feed["url"],
+            "enabled": bool(feed.get("enabled", False)),
+            "category": feed.get("category", "unspecified"),
+        }
+        for feed in config["feeds"]
+    ]
+    return {"items": feeds, "count": len(feeds)}
+
+
 @app.post("/sources", status_code=201)
 def add_source(source: SourceDocumentIn) -> dict:
     """Store source metadata; content hashes are unique when supplied."""
