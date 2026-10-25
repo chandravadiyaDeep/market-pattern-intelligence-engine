@@ -55,7 +55,8 @@ def test_feed_pipeline_deduplicates_persisted_records(tmp_path: Path):
         "    enabled: true\n",
         encoding="utf-8",
     )
-    fetcher = lambda url: RSS
+    def fetcher(url: str) -> bytes:
+        return RSS
     first = ingest_feeds(config, db_path=database, fetcher=fetcher, delay_seconds=0)
     second = ingest_feeds(config, db_path=database, fetcher=fetcher, delay_seconds=0)
     assert first["records_inserted"] == 1
