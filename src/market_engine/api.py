@@ -1,5 +1,4 @@
 """Local research API. All order endpoints are simulation-only; no broker integration exists."""
-import json
 from datetime import datetime
 from fastapi import FastAPI, HTTPException, Query
 from market_engine.db import connect, init_db, now_iso
