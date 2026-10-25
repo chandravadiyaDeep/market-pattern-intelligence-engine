@@ -76,13 +76,6 @@ research_sources:
     url: https://www.bseindia.com/
     access: manual_or_authorized_connector
     priority: high
-  - id: company_ir
-    name: Company investor relations pages
-    category: company_primary_sources
-    url: https://www.nifty50.com/
-    access: manual_or_authorized_connector
-    priority: medium
-    note: Use each issuer's own investor-relations page; this is a starting directory, not a canonical filings API.
   - id: rbi_dbe
     name: RBI Database on Indian Economy
     category: macroeconomic_data
