@@ -1,6 +1,5 @@
 """Authorized RSS/Atom ingestion into a provenance-preserving source registry."""
 import hashlib
-import json
 import time
 import urllib.error
 import urllib.request
@@ -79,7 +78,7 @@ def parse_feed(xml_bytes: bytes, source: dict[str, Any]) -> list[dict[str, Any]]
     for entry in entries:
         title = _child_text(entry, {"title"})
         link = _entry_link(entry)
-        published = _child_text(entry, {"pubdate", "published", "updated", "date", "dc:date"})
+        published = _child_text(entry, {"pubdate", "published", "updated", "date"})
         if not title or not link:
             continue
         summary = _child_text(entry, {"description", "summary", "subtitle", "content"}) or ""
