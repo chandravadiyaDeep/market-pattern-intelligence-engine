@@ -65,6 +65,19 @@ def list_configured_feeds() -> dict:
     return {"items": feeds, "count": len(feeds)}
 
 
+@app.get("/research-sources")
+def list_research_sources() -> dict:
+    """List research links from the machine-readable source registry."""
+    from .feed_pipeline import load_feed_config
+
+    try:
+        config = load_feed_config()
+    except (FileNotFoundError, ValueError) as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    sources = config.get("research_sources", [])
+    return {"items": sources, "count": len(sources)}
+
+
 @app.post("/sources", status_code=201)
 def add_source(source: SourceDocumentIn) -> dict:
     """Store source metadata; content hashes are unique when supplied."""
