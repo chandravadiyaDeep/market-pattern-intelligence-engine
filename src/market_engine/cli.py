@@ -7,6 +7,7 @@ from .forecasting import estimate_event_probability
 from .evaluation import evaluate_binary_probabilities
 from .importers import import_events_csv
 from .feed_pipeline import ingest_feeds
+from .market_data_importer import import_prices_csv
 
 
 def run_demo() -> None:
@@ -26,9 +27,10 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Market Pattern Intelligence Engine")
     parser.add_argument(
         "command",
-        choices=["init-db", "demo", "import-events", "fetch-feeds"],
+        choices=["init-db", "demo", "import-events", "fetch-feeds", "import-prices"],
     )
-    parser.add_argument("--file", help="CSV path required for import-events")
+    parser.add_argument("--file", help="CSV path required for import-events and import-prices")
+    parser.add_argument("--source", default="manual_csv", help="Price-data source label for import-prices")
     parser.add_argument(
         "--config",
         default="config/research_sources.yaml",
@@ -48,11 +50,19 @@ def main() -> None:
         init_db()
         result = import_events_csv(args.file, dry_run=args.dry_run)
         print(json.dumps(result, indent=2))
-    else:
+    elif args.command == "fetch-feeds":
         init_db()
         result = ingest_feeds(config_path=args.config, dry_run=args.dry_run)
         print(json.dumps(result, indent=2))
         if result["feeds_failed"]:
+            raise SystemExit(1)
+    else:
+        if not args.file:
+            parser.error("--file is required when command is import-prices")
+        init_db()
+        result = import_prices_csv(args.file, source_name=args.source, dry_run=args.dry_run)
+        print(json.dumps(result, indent=2))
+        if result["invalid_rows"]:
             raise SystemExit(1)
 
 
