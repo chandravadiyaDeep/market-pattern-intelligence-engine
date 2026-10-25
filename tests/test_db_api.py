@@ -34,3 +34,25 @@ def test_event_creation_and_listing_uses_temp_database(tmp_path, monkeypatch):
     listed = client.get("/events?symbol=RELIANCE")
     assert listed.status_code == 200
     assert listed.json()["count"] == 1
+
+
+def test_pattern_endpoint_reports_descriptive_counts(tmp_path, monkeypatch):
+    """Pattern route should count disclosed events without presenting counts as forecasts."""
+    db_file = tmp_path / "patterns.sqlite3"
+    monkeypatch.setattr(api_module, "connect", lambda: connect(db_file))
+    init_db(db_file)
+    client = TestClient(app)
+    response = client.post("/events", json={
+        "symbol": "HDFCBANK",
+        "event_type": "governance",
+        "title": "Synthetic governance event",
+        "summary": "Test-only record.",
+        "disclosed_at": "2026-10-01T12:00:00+00:00",
+        "status": "unverified"
+    })
+    assert response.status_code == 201
+    result = client.get("/patterns/event-counts?lookback_days=90&symbol=HDFCBANK")
+    assert result.status_code == 200
+    assert result.json()["event_count"] == 1
+    assert result.json()["by_event_type"][0]["event_type"] == "governance"
+    assert result.json()["interpretation"] == "descriptive_frequency_only_not_a_forecast"
