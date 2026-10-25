@@ -1,4 +1,4 @@
-"""Small SQLite persistence layer suitable for local-first V1."""
+"""SQLite persistence for local-first research. No broker connection is provided."""
 import os
 import sqlite3
 from pathlib import Path
@@ -7,18 +7,24 @@ from datetime import datetime, timezone
 
 
 def database_path() -> str:
-    """Read configured DB path, defaulting to a local SQLite file."""
-    return os.getenv("MARKET_ENGINE_DB", "./data/market_engine.sqlite")
+    """Resolve database path from supported environment variables."""
+    return os.getenv("MPIE_DATABASE_PATH", os.getenv("MARKET_ENGINE_DB", "./data/mpie.sqlite3"))
+
+
+def now_iso() -> str:
+    """Return an ISO-8601 UTC timestamp."""
+    return datetime.now(timezone.utc).isoformat()
 
 
 @contextmanager
-def connect():
-    """Open a database connection and always close it."""
-    path = database_path()
+def connect(db_path: str | None = None):
+    """Open a connection, create its parent directory, and handle transactions."""
+    path = db_path or database_path()
     if path != ":memory:":
-        Path(path).parent.mkdir(parents=True, exist_ok=True)
+        Path(path).expanduser().parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
     try:
         yield conn
         conn.commit()
@@ -29,57 +35,65 @@ def connect():
         conn.close()
 
 
-def init_db() -> None:
-    """Create tables and indexes idempotently."""
-    with connect() as conn:
+def init_db(db_path: str | None = None) -> None:
+    """Create V1 tables and indexes idempotently."""
+    with connect(db_path) as conn:
         conn.executescript("""
+        CREATE TABLE IF NOT EXISTS source_documents (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            source_type TEXT NOT NULL,
+            title TEXT NOT NULL,
+            url TEXT,
+            published_at TEXT,
+            first_seen_at TEXT NOT NULL,
+            retrieved_at TEXT NOT NULL,
+            content_hash TEXT,
+            text_excerpt TEXT,
+            UNIQUE(url, content_hash)
+        );
         CREATE TABLE IF NOT EXISTS events (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             symbol TEXT NOT NULL,
             event_type TEXT NOT NULL,
             title TEXT NOT NULL,
-            summary TEXT NOT NULL DEFAULT '',
-            event_time TEXT,
-            published_at TEXT NOT NULL,
-            first_seen_at TEXT NOT NULL,
-            source_url TEXT NOT NULL,
-            source_name TEXT NOT NULL,
-            confidence REAL NOT NULL,
-            severity INTEGER NOT NULL,
-            created_at TEXT NOT NULL,
-            content_hash TEXT
+            summary TEXT NOT NULL,
+            event_at TEXT,
+            disclosed_at TEXT,
+            source_id INTEGER REFERENCES source_documents(id),
+            evidence_confidence REAL NOT NULL DEFAULT 0.5,
+            materiality INTEGER NOT NULL DEFAULT 1,
+            status TEXT NOT NULL DEFAULT 'unverified',
+            created_at TEXT NOT NULL
         );
-        CREATE INDEX IF NOT EXISTS idx_events_symbol_published
-            ON events(symbol, published_at);
-        CREATE UNIQUE INDEX IF NOT EXISTS idx_events_source_title_time
-            ON events(source_url, title, published_at);
-        CREATE TABLE IF NOT EXISTS forecasts (
+        CREATE INDEX IF NOT EXISTS idx_events_symbol_disclosed ON events(symbol, disclosed_at);
+        CREATE TABLE IF NOT EXISTS predictions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             symbol TEXT NOT NULL,
-            target TEXT NOT NULL,
-            horizon_days INTEGER NOT NULL,
+            target_name TEXT NOT NULL,
+            horizon_sessions INTEGER NOT NULL,
             probability REAL NOT NULL CHECK(probability >= 0 AND probability <= 1),
+            model_name TEXT NOT NULL,
             model_version TEXT NOT NULL,
-            evidence_json TEXT NOT NULL DEFAULT '[]',
-            created_at TEXT NOT NULL,
-            outcome INTEGER CHECK(outcome IN (0, 1)),
-            outcome_recorded_at TEXT
+            evidence_note TEXT NOT NULL DEFAULT '',
+            as_of TEXT NOT NULL,
+            outcome INTEGER CHECK(outcome IN (0,1)),
+            outcome_at TEXT
         );
-        CREATE INDEX IF NOT EXISTS idx_forecasts_created ON forecasts(created_at);
+        CREATE INDEX IF NOT EXISTS idx_predictions_as_of ON predictions(as_of);
         CREATE TABLE IF NOT EXISTS paper_orders (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             symbol TEXT NOT NULL,
-            side TEXT NOT NULL CHECK(side IN ('buy', 'sell')),
+            side TEXT NOT NULL CHECK(side IN ('BUY','SELL')),
             quantity REAL NOT NULL CHECK(quantity > 0),
-            submitted_at TEXT NOT NULL,
             reference_price REAL NOT NULL CHECK(reference_price > 0),
             estimated_cost REAL NOT NULL DEFAULT 0,
-            strategy_id TEXT NOT NULL,
-            status TEXT NOT NULL DEFAULT 'simulated'
+            strategy_name TEXT NOT NULL,
+            signal_time TEXT NOT NULL,
+            expected_fill_time TEXT NOT NULL,
+            rationale TEXT NOT NULL DEFAULT '',
+            status TEXT NOT NULL DEFAULT 'PENDING',
+            simulated_fill_price REAL,
+            simulated_fill_time TEXT,
+            created_at TEXT NOT NULL
         );
         """)
-
-
-def utc_now() -> str:
-    """Return timezone-aware ISO timestamp."""
-    return datetime.now(timezone.utc).isoformat()
