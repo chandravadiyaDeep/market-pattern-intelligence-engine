@@ -1,0 +1,182 @@
+version: 1
+description: >
+  Research source registry for the Market Pattern Intelligence Engine.
+  Feed URLs are the only URLs fetched automatically by the RSS pipeline.
+  Other URLs are reference links until a permitted connector is implemented.
+
+feeds:
+  - id: business_standard_latest
+    name: Business Standard - Latest
+    source_type: news_rss
+    url: https://www.business-standard.com/rss/latest.rss
+    enabled: true
+    category: business_news
+    terms_note: Verify current publisher terms and permitted automated use before production.
+  - id: economic_times_top_stories
+    name: The Economic Times - Top Stories
+    source_type: news_rss
+    url: https://economictimes.indiatimes.com/rssfeedstopstories.cms
+    enabled: true
+    category: business_news
+    terms_note: General headlines may not all concern Nifty 50 companies; verify current terms.
+  - id: nse_rss_directory
+    name: NSE RSS feed directory (reference only)
+    source_type: official_exchange_reference
+    url: https://www.nseindia.com/static/rss-feed
+    enabled: false
+    category: official_filings
+    terms_note: Landing page, not a feed URL. Select an actual feed URL from the official page and confirm terms before enabling.
+
+research_sources:
+  - id: nse_announcements
+    name: NSE corporate announcements
+    category: official_filings
+    url: https://www.nseindia.com/companies-listing/corporate-filings-announcements
+    access: manual_or_authorized_connector
+    priority: critical
+  - id: nse_rss_directory
+    name: NSE RSS feeds
+    category: official_filings
+    url: https://www.nseindia.com/static/rss-feed
+    access: official_rss_links_listed_on_page
+    priority: critical
+  - id: nse_all_reports
+    name: NSE All Reports
+    category: market_data
+    url: https://www.nseindia.com/all-reports
+    access: manual_or_authorized_connector
+    priority: high
+  - id: nse_historical_reports
+    name: NSE historical reports
+    category: market_data
+    url: https://www.nseindia.com/static/resources/historical-reports-capital-market-daily-monthly-archives
+    access: manual_or_authorized_connector
+    priority: high
+  - id: nse_paid_data
+    name: NSE Data and Analytics - market data subscriptions
+    category: market_data
+    url: https://www.nse.in/static/market-data/real-time-data-subscription
+    access: paid_or_authorized_vendor
+    priority: high
+  - id: nifty_indices
+    name: Nifty Indices reports and historical index data
+    category: index_data
+    url: https://www.niftyindices.com/reports
+    access: manual_or_authorized_connector
+    priority: critical
+  - id: bse_announcements
+    name: BSE corporate announcements
+    category: official_filings
+    url: https://www.bseindia.com/corporates/ann.html
+    access: manual_or_authorized_connector
+    priority: high
+  - id: bse_filings
+    name: BSE corporate announcements and filings portal
+    category: official_filings
+    url: https://www.bseindia.com/
+    access: manual_or_authorized_connector
+    priority: high
+  - id: company_ir
+    name: Company investor relations pages
+    category: company_primary_sources
+    url: https://www.nifty50.com/
+    access: manual_or_authorized_connector
+    priority: medium
+    note: Use each issuer's own investor-relations page; this is a starting directory, not a canonical filings API.
+  - id: rbi_dbe
+    name: RBI Database on Indian Economy
+    category: macroeconomic_data
+    url: https://data.rbi.org.in/
+    access: public_site_check_series_specific_terms
+    priority: medium
+  - id: google_trends
+    name: Google Trends
+    category: search_interest
+    url: https://trends.google.com/trends/
+    access: web_ui_or_approved_api
+    priority: high
+    note: The Google Trends API is alpha/limited access; do not assume general API access.
+  - id: google_trends_api
+    name: Google Trends API alpha documentation
+    category: search_interest
+    url: https://developers.google.com/search/apis/trends
+    access: limited_alpha_application
+    priority: high
+  - id: x_api
+    name: X developer platform
+    category: social_media
+    url: https://developer.x.com/en
+    access: official_api_and_plan
+    priority: medium
+  - id: reddit_api
+    name: Reddit developer platform
+    category: social_media
+    url: https://developers.reddit.com/
+    access: official_api_and_terms
+    priority: medium
+  - id: youtube_data_api
+    name: YouTube Data API
+    category: social_media
+    url: https://developers.google.com/youtube/v3
+    access: official_api_and_quota
+    priority: medium
+  - id: stocktwits
+    name: Stocktwits
+    category: investor_discussion
+    url: https://stocktwits.com/
+    access: check_current_api_availability_and_terms
+    priority: low
+  - id: business_standard
+    name: Business Standard
+    category: news
+    url: https://www.business-standard.com/
+    access: rss_or_licensed_api_subject_to_terms
+    priority: high
+  - id: economic_times
+    name: The Economic Times
+    category: news
+    url: https://economictimes.indiatimes.com/markets
+    access: rss_or_licensed_api_subject_to_terms
+    priority: high
+  - id: moneycontrol
+    name: Moneycontrol Markets
+    category: news
+    url: https://www.moneycontrol.com/news/business/markets/
+    access: licensed_api_or_permitted_feed
+    priority: high
+  - id: livemint
+    name: Mint Markets
+    category: news
+    url: https://www.livemint.com/market
+    access: licensed_api_or_permitted_feed
+    priority: high
+  - id: reuters
+    name: Reuters
+    category: news
+    url: https://www.reuters.com/markets/asia/india/
+    access: licensed_api_or_permitted_feed
+    priority: high
+  - id: businessline
+    name: The Hindu BusinessLine Markets
+    category: news
+    url: https://www.thehindubusinessline.com/markets/
+    access: licensed_api_or_permitted_feed
+    priority: medium
+  - id: financial_express
+    name: Financial Express Markets
+    category: news
+    url: https://www.financialexpress.com/market/
+    access: licensed_api_or_permitted_feed
+    priority: medium
+  - id: sebi
+    name: SEBI
+    category: regulation
+    url: https://www.sebi.gov.in/
+    access: official_publications
+    priority: high
+  - id: google_news
+    name: Google News India business search
+    category: news_discovery
+    url: https://news.google.com/
+    access: user_interface_or_terms_compliant_feed
+    priority: medium
