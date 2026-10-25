@@ -1,2 +1,2 @@
-symbol,event_type,title,summary,event_at,disclosed_at,evidence_confidence,materiality,status
-HDFCBANK,governance,SYNTHETIC EXAMPLE ONLY,Replace this sample row with a properly sourced event,,2026-10-01T12:00:00+05:30,0.5,1,unverified
+symbol,event_type,title,summary,event_at,disclosed_at,evidence_confidence,materiality,status,source_url,source_type,source_title,source_published_at
+HDFCBANK,governance,SYNTHETIC EXAMPLE ONLY,Replace this sample row with a properly sourced event,,2026-10-01T12:00:00+05:30,0.5,1,unverified,https://example.com/synthetic-event,example,Synthetic placeholder source,2026-10-01T12:00:00+05:30
