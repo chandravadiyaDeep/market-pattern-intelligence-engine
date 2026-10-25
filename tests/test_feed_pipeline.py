@@ -105,9 +105,9 @@ def test_duplicate_feed_ids_are_rejected_before_fetch(tmp_path: Path):
     """Duplicate IDs fail fast so feed config remains auditable."""
     config = tmp_path / "duplicate.yaml"
     config.write_text(
-        "feeds:\\n"
-        "  - id: same\\n    url: https://example.com/a.xml\\n"
-        "  - id: same\\n    url: https://example.com/b.xml\\n",
+        "feeds:\n"
+        "  - id: same\n    url: https://example.com/a.xml\n"
+        "  - id: same\n    url: https://example.com/b.xml\n",
         encoding="utf-8",
     )
     with pytest.raises(ValueError, match="Duplicate feed id"):
