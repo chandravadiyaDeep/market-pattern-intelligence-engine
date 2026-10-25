@@ -86,8 +86,10 @@ def parse_feed(xml_bytes: bytes, source: dict[str, Any]) -> list[dict[str, Any]]
         excerpt = " ".join(summary.split())[:1000] or None
         published_at = parse_timestamp(published)
         canonical_url = link.strip()
+        # Fingerprint content independently of the feed ID so syndicated copies with
+        # the same canonical URL and timestamp can be deduplicated across feed sources.
         fingerprint = hashlib.sha256(
-            f"{source.get('id', source.get('name', 'feed'))}|{canonical_url}|{published_at or ''}|{title.strip()}".encode("utf-8")
+            f"{canonical_url}|{published_at or ''}|{title.strip()}".encode("utf-8")
         ).hexdigest()
         records.append({
             "source_type": str(source.get("source_type", "rss_news")),
