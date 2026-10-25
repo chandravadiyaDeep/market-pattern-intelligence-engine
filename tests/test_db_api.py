@@ -56,3 +56,33 @@ def test_pattern_endpoint_reports_descriptive_counts(tmp_path, monkeypatch):
     assert result.json()["event_count"] == 1
     assert result.json()["by_event_type"][0]["event_type"] == "governance"
     assert result.json()["interpretation"] == "descriptive_frequency_only_not_a_forecast"
+
+
+def test_prediction_outcome_is_recorded_once(tmp_path, monkeypatch):
+    """Outcome can be added after a forecast but cannot be silently rewritten."""
+    db_file = tmp_path / "predictions.sqlite3"
+    monkeypatch.setattr(api_module, "connect", lambda: connect(db_file))
+    init_db(db_file)
+    client = TestClient(app)
+    created = client.post("/predictions", json={
+        "symbol": "TCS",
+        "target_name": "negative sector-relative return within 5 sessions",
+        "horizon_sessions": 5,
+        "probability": 0.35,
+        "model_name": "baseline",
+        "model_version": "0.1.0",
+        "as_of": "2026-01-01T10:00:00+00:00"
+    })
+    assert created.status_code == 201
+    prediction_id = created.json()["id"]
+    resolved = client.post(
+        f"/predictions/{prediction_id}/outcome",
+        params={"outcome": 0, "outcome_at": "2026-01-08T10:00:00+00:00"},
+    )
+    assert resolved.status_code == 200
+    assert resolved.json()["outcome"] == 0
+    repeated = client.post(
+        f"/predictions/{prediction_id}/outcome",
+        params={"outcome": 1, "outcome_at": "2026-01-09T10:00:00+00:00"},
+    )
+    assert repeated.status_code == 409
