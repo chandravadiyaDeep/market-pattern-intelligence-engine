@@ -65,7 +65,8 @@ Maintain source links in [resources/RESEARCH_SOURCES.md](resources/RESEARCH_SOUR
 ## API routes
 
 - `GET /health`
-- `POST /sources`
+- `POST /sources` and `GET /sources`
+- `GET /pipeline/feeds` (configuration only; does not trigger a network fetch)
 - `POST /events` and `GET /events`
 - `POST /predictions` and `GET /predictions`
 - `POST /predictions/{id}/outcome`
@@ -91,4 +92,4 @@ Begin with small manually curated datasets or sources whose terms permit the int
 
 ## Important limitations
 
-The repository does **not yet** include an automated NSE/BSE data connector, a historical Nifty 50 constituent loader, a validated corporate-event prediction model, or a complete return-aware walk-forward strategy simulator. Those are next milestones. V1 should first establish reliable timestamps, data provenance, tests, and out-of-sample evaluation.
+The repository now includes a configurable RSS/Atom metadata-ingestion pipeline, but it does **not yet** include a dedicated NSE/BSE filings connector, a historical Nifty 50 constituent loader, a licensed historical price feed, automatic event extraction and verification, a validated corporate-event prediction model, or a complete return-aware walk-forward strategy simulator. The initial enabled feeds are general news feeds, not a complete or guaranteed Nifty 50 feed. The market-feature utilities are not yet connected to a persisted historical price store.
