@@ -5,6 +5,55 @@ description: >
   Other URLs are reference links until a permitted connector is implemented.
 
 feeds:
+  - id: nse_announcements
+    name: NSE - Latest Corporate Announcements
+    source_type: official_exchange_rss
+    url: https://nsearchives.nseindia.com/content/RSS/Online_announcements.xml
+    enabled: true
+    category: official_filings
+    terms_note: Official NSE RSS directory lists announcement feeds; check access terms and feed behavior.
+  - id: nse_corporate_actions
+    name: NSE - Corporate Actions
+    source_type: official_exchange_rss
+    url: https://nsearchives.nseindia.com/content/RSS/Corporate_action.xml
+    enabled: true
+    category: official_filings
+    terms_note: Official NSE RSS category; verify coverage and timestamps.
+  - id: nse_board_meetings
+    name: NSE - Board Meetings
+    source_type: official_exchange_rss
+    url: https://nsearchives.nseindia.com/content/RSS/Board_Meetings.xml
+    enabled: true
+    category: official_filings
+    terms_note: Official NSE RSS category; verify coverage and timestamps.
+  - id: nse_financial_results
+    name: NSE - Financial Results
+    source_type: official_exchange_rss
+    url: https://nsearchives.nseindia.com/content/RSS/Financial_Results.xml
+    enabled: true
+    category: official_filings
+    terms_note: Official NSE RSS category; verify feed URL in current official RSS directory.
+  - id: business_standard_latest
+    name: Business Standard - Latest
+    source_type: news_rss
+    url: https://www.business-standard.com/rss/latest.rss
+    enabled: true
+    category: business_news
+    terms_note: Verify current publisher terms and permitted automated use before production.
+  - id: economic_times_top_stories
+    name: The Economic Times - Top Stories
+    source_type: news_rss
+    url: https://economictimes.indiatimes.com/rssfeedstopstories.cms
+    enabled: true
+    category: business_news
+    terms_note: General headlines may not all concern Nifty 50 companies; verify current terms.
+  - id: nse_rss_directory
+    name: NSE RSS feed directory (reference only)
+    source_type: official_exchange_reference
+    url: https://www.nseindia.com/static/rss-feed
+    enabled: false
+    category: official_filings
+    terms_note: Landing page, not a feed URL. Select an actual feed URL from the official page and confirm terms before enabling.
   - id: business_standard_latest
     name: Business Standard - Latest
     source_type: news_rss
