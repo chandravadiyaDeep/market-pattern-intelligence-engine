@@ -9,7 +9,7 @@ The importer lets you start with a small hand-curated or appropriately licensed 
 - `title`: short event title.
 - `summary`: concise description with no unsupported inference.
 
-Optional columns: `event_at`, `disclosed_at`, `evidence_confidence` (0–1), `materiality` (1–5), and `status` (unverified, corroborated, official, retracted).
+Optional event columns: `event_at`, `disclosed_at`, `evidence_confidence` (0–1), `materiality` (1–5), and `status` (unverified, corroborated, official, retracted). Optional provenance columns: `source_url`, `source_type`, `source_title`, and `source_published_at`. When `source_url` is supplied, the importer stores or reuses a source-document record and links the event to it. Rows without a source URL can still be imported but are counted in `rows_missing_source_url`.
 
 Use ISO 8601 timestamps with a timezone offset whenever possible. `disclosed_at` is the date the information became available to the public, not necessarily the date the underlying event happened.
 
