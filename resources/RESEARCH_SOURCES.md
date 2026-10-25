@@ -8,6 +8,10 @@ This is the human-maintained directory of sources for the Market Pattern Intelli
 |---|---|---|
 | NSE corporate announcements | https://www.nseindia.com/companies-listing/corporate-filings-announcements | Primary evidence for company disclosures |
 | NSE RSS directory | https://www.nseindia.com/static/rss-feed | Official RSS feeds for announcements, financial results, board meetings, corporate actions and circulars |
+| NSE latest corporate announcements RSS | https://nsearchives.nseindia.com/content/RSS/Online_announcements.xml | Feed configured for headline ingestion |
+| NSE corporate actions RSS | https://nsearchives.nseindia.com/content/RSS/Corporate_action.xml | Feed configured for corporate-action headlines |
+| NSE board meetings RSS | https://nsearchives.nseindia.com/content/RSS/Board_Meetings.xml | Feed configured for board-meeting headlines |
+| NSE financial results RSS | https://nsearchives.nseindia.com/content/RSS/Financial_Results.xml | Feed configured; confirm URL against the current official RSS directory if it fails |
 | NSE all reports | https://www.nseindia.com/all-reports | Daily market reports and exchange files |
 | NSE historical reports | https://www.nseindia.com/static/resources/historical-reports-capital-market-daily-monthly-archives | Historical equity and index report discovery |
 | NSE Data & Analytics | https://www.nse.in/static/market-data/real-time-data-subscription | Official market-data product and subscription details |
