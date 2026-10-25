@@ -26,7 +26,7 @@ Open the API explorer at http://127.0.0.1:8000/docs.
 - Source registry that retains publication, first-seen and retrieval timestamps.
 - Structured event timeline with evidence confidence, materiality and verification status.
 - CSV import for manually curated or otherwise permitted event datasets.
-- RSS/Atom ingestion pipeline with dry-run mode, timestamp normalization, source metadata storage and duplicate detection.
+- RSS/Atom ingestion pipeline for official NSE announcements, corporate actions, board meetings and financial results, plus market-specific news feeds; includes dry-run mode, timestamp normalization, source metadata storage and duplicate detection.
 - Descriptive event-frequency exploration over a lookback window.
 - Transparent smoothed historical base-rate estimates.
 - Point-in-time market features: daily returns, trailing momentum, annualized realized volatility and benchmark-relative returns.
@@ -73,6 +73,7 @@ Maintain source links in [resources/RESEARCH_SOURCES.md](resources/RESEARCH_SOUR
 - `GET /health`
 - `POST /sources` and `GET /sources`
 - `GET /pipeline/feeds` (configuration only; does not trigger a network fetch)
+- `GET /research-sources` (source-link catalog)
 - `GET /market-bars`
 - `GET /market-bars/{symbol}/features`
 - `POST /events` and `GET /events`
