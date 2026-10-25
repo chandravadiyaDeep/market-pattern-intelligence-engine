@@ -1,0 +1,23 @@
+# Illustrative configuration; no live feeds or automatic trading enabled.
+project:
+  name: Market Pattern Intelligence Engine
+  mode: research_only
+  universe: NIFTY_50
+  timezone: Asia/Kolkata
+
+collection:
+  market_frequency: daily
+  scheduled_collection_enabled: false
+  news_connector_enabled: false
+  filings_connector_enabled: false
+
+prediction:
+  event_horizons_sessions: [20, 60]
+  market_horizons_sessions: [1, 5, 20]
+  require_evidence_snapshot: true
+  preserve_original_forecasts: true
+
+paper_trading:
+  enabled: false
+  live_orders_enabled: false
+  default_fill_policy: next_eligible_session
