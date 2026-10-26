@@ -363,7 +363,14 @@ def research_predictive_baseline(
                 ORDER BY session_date DESC LIMIT ?""",
                 (requested_symbol, limit),
             ).fetchall())
-    prices: dict[str, dict[str, float]] = {}
+        # Use only explicitly verified issuer disclosures in event-aware features.
+        event_rows = conn.execute(
+            """SELECT symbol,event_type,disclosed_at,status FROM events
+            WHERE symbol=? AND status IN ('official','corroborated')
+            AND disclosed_at IS NOT NULL ORDER BY disclosed_at ASC""",
+            (normalized_symbol,),
+        ).fetchall()
+    prices: dict[str, dict[str, float]] = {};
     for row in rows:
         prices.setdefault(str(row["symbol"]).strip().upper(), {})[row["session_date"]] = float(row["price"])
     if normalized_symbol not in prices or normalized_benchmark not in prices:
