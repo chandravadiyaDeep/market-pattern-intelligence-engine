@@ -23,3 +23,5 @@ jobs:
         run: pytest -q
       - name: Check formatting and common issues
         run: ruff check --select E4,E7,E9,F src tests
+      - name: Build production Docker image
+        run: docker build -t market-pattern-intelligence-engine:ci .
