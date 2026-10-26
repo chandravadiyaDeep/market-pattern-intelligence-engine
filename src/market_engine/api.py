@@ -229,7 +229,7 @@ def research_event_study(
         # Only explicitly verified events enter the primary analysis to limit label contamination.
         event_rows = conn.execute(
             """SELECT id,symbol,event_type,disclosed_at FROM events
-            WHERE status='verified' AND disclosed_at IS NOT NULL
+            WHERE status IN ('official','corroborated') AND disclosed_at IS NOT NULL
             ORDER BY disclosed_at ASC LIMIT ?""",
             (limit,),
         ).fetchall()
