@@ -67,6 +67,9 @@ market-engine import-prices --file .\\examples\\sample_prices.csv --source synth
 # Import an authorized provider's daily OHLCV CSV
 market-engine import-prices --file .\\data\\licensed_prices.csv --source your-provider
 
+# Import dated historical index membership (verify source and dates first)
+market-engine import-constituents --file .\\data\\nifty_constituents_history.csv --source official-or-authorized-source
+
 # Start API
 uvicorn market_engine.api:app --reload
 ```
@@ -87,7 +90,7 @@ Maintain source links in [resources/RESEARCH_SOURCES.md](resources/RESEARCH_SOUR
 - `GET /research-sources` (source-link catalog)
 - `GET /research/event-study?benchmark_symbol=NIFTY50&horizons=1,3,5,10,20` (official/corroborated event study)
 - `GET /research/predictive-baseline/TCS?benchmark_symbol=NIFTY50&horizon_sessions=5` (experimental price + verified-event baseline; requires sufficient aligned stock and benchmark history; excludes disclosures from the same feature date)
-- `GET /market-bars`
+- `GET /universe/constituents?as_of=2024-01-01` (historical membership intervals from imported data)\n- `GET /market-bars`
 - `GET /market-bars/{symbol}/features`
 - `POST /events` and `GET /events`
 - `POST /predictions` and `GET /predictions`
@@ -116,4 +119,4 @@ Begin with small manually curated datasets or sources whose terms permit the int
 
 ## Important limitations
 
-The repository now includes a configurable RSS/Atom metadata-ingestion pipeline, a rule-based event-candidate review queue, and a validated CSV importer for daily OHLCV history. The event-candidate rules and starter company alias list are deliberately incomplete and need ongoing validation. It does **not yet** include a dedicated NSE/BSE filings connector, a historical Nifty 50 constituent loader, a licensed live or historical price feed, automatic event extraction and verification, a validated corporate-event prediction model, or a complete return-aware walk-forward strategy simulator. The included sample prices are synthetic only. The initial enabled feeds are general news feeds, not a complete or guaranteed Nifty 50 feed. The market-feature utilities are not yet connected to a persisted historical price store.
+The repository now includes a configurable RSS/Atom metadata-ingestion pipeline, a rule-based event-candidate review queue, and a validated CSV importer for daily OHLCV history. The event-candidate rules and starter company alias list are deliberately incomplete and need ongoing validation. It does **not yet** include a dedicated NSE/BSE filings connector, an automatic or authoritative Nifty 50 constituent loader, a licensed live or historical price feed, automatic event extraction and verification, a validated corporate-event prediction model, or a complete return-aware walk-forward strategy simulator. The included sample prices are synthetic only. The initial enabled feeds are general news feeds, not a complete or guaranteed Nifty 50 feed. Historical constituent membership can now be imported from a curated CSV and queried by date; the engine does not download or certify official membership history for you. The market-feature utilities are not yet fully connected to a persisted historical price store.
