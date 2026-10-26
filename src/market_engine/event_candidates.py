@@ -125,21 +125,27 @@ def classify_source_documents(
         "documents_scanned": 0,
         "candidates_found": 0,
         "candidates_inserted": 0,
-        "already_processed": 0,
         "unmatched": 0,
         "items": [],
     }
     with connect(db_path) as conn:
         rows = conn.execute(
             """SELECT s.* FROM source_documents s
-            LEFT JOIN event_candidates c ON c.source_id = s.id
-            WHERE c.id IS NULL ORDER BY s.published_at DESC, s.id DESC"""
+            LEFT JOIN headline_triage t ON t.source_id = s.id
+            WHERE t.id IS NULL ORDER BY s.published_at DESC, s.id DESC"""
         ).fetchall()
         result["documents_scanned"] = len(rows)
         for row in rows:
             candidate = classify_headline(row["title"], row["text_excerpt"] or "", aliases)
             if candidate is None:
                 result["unmatched"] += 1
+                if not dry_run:
+                    conn.execute(
+                        """INSERT OR IGNORE INTO headline_triage
+                        (source_id,classifier_version,matched,processed_at)
+                        VALUES (?,?,?,?)""",
+                        (row["id"], CLASSIFIER_VERSION, 0, now_iso()),
+                    )
                 continue
             result["candidates_found"] += 1
             item = {
@@ -166,4 +172,10 @@ def classify_source_documents(
                  CLASSIFIER_VERSION, "pending_review", now_iso()),
             )
             result["candidates_inserted"] += 1
+            conn.execute(
+                """INSERT OR IGNORE INTO headline_triage
+                (source_id,classifier_version,matched,processed_at)
+                VALUES (?,?,?,?)""",
+                (row["id"], CLASSIFIER_VERSION, 1, now_iso()),
+            )
     return result
