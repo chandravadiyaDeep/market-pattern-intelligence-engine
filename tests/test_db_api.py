@@ -344,3 +344,32 @@ def test_predictive_baseline_endpoint_returns_walk_forward_metrics(tmp_path, mon
     assert payload["verified_events_used"] == 1
     assert "event_earnings_count_5s" in payload["feature_names"]
     assert "not a trading recommendation" in payload["warning"]
+
+
+
+def test_constituent_universe_endpoint_filters_by_as_of_date(tmp_path, monkeypatch):
+    """Historical universe queries include only intervals active on the requested date."""
+    db_file = tmp_path / "universe.sqlite3"
+    monkeypatch.setattr(api_module, "connect", lambda: connect(db_file))
+    init_db(db_file)
+    with connect(db_file) as conn:
+        conn.executemany(
+            """INSERT INTO constituent_membership
+            (symbol,company_name,start_date,end_date,source_name,retrieved_at)
+            VALUES (?,?,?,?,?,?)""",
+            [
+                ("TCS", "Tata Consultancy Services", "2020-01-01", "2022-12-31",
+                 "official-test", "2026-10-26T00:00:00+00:00"),
+                ("INFY", "Infosys", "2021-01-01", None,
+                 "official-test", "2026-10-26T00:00:00+00:00"),
+            ],
+        )
+    client = TestClient(app)
+    historical = client.get("/universe/constituents?as_of=2022-06-01")
+    assert historical.status_code == 200
+    assert {item["symbol"] for item in historical.json()["items"]} == {"TCS", "INFY"}
+    later = client.get("/universe/constituents?as_of=2024-01-01")
+    assert later.status_code == 200
+    assert {item["symbol"] for item in later.json()["items"]} == {"INFY"}
+    invalid = client.get("/universe/constituents?as_of=not-a-date")
+    assert invalid.status_code == 422
