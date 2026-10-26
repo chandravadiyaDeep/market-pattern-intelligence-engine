@@ -340,6 +340,7 @@ def research_predictive_baseline(
     limit: int = 5000,
 ) -> dict:
     """Run a numeric excess-return baseline with expanding-window out-of-sample evaluation."""
+    from .event_features import add_event_features
     from .prediction_dataset import build_prediction_dataset
     from .ridge_model import fit_ridge, predict_ridge, walk_forward_ridge
 
@@ -389,6 +390,8 @@ def research_predictive_baseline(
             "horizon_sessions": horizon_sessions,
         }
 
+    # Add only historical disclosures known before each feature date.
+    dataset = add_event_features(dataset, [dict(row) for row in event_rows], normalized_symbol)
     rows_for_model = dataset["rows"]
     evaluation = walk_forward_ridge(
         rows_for_model, train_fraction=0.7, ridge_alpha=1.0, minimum_training_rows=30
@@ -399,6 +402,9 @@ def research_predictive_baseline(
         "benchmark_symbol": normalized_benchmark,
         "horizon_sessions": horizon_sessions,
         "feature_names": dataset["feature_names"],
+        "event_features_added": dataset.get("event_features_added", False),
+        "verified_events_used": dataset.get("verified_events_used", 0),
+        "event_feature_policy": dataset.get("event_feature_policy"),
         "target_definition": dataset["target_definition"],
         "feature_cutoff": dataset["feature_cutoff"],
         "labeled_rows": len(rows_for_model),
