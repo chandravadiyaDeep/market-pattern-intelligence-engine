@@ -66,11 +66,27 @@ def build_prediction_dataset(
             "target_forward_excess_log_return": target,
             "target_end_date": dates[index + horizon_sessions],
         })
+    # Latest features use only the most recent shared close and have no future target yet.
+    latest_index = len(dates) - 1
+    latest_stock_returns = [
+        float(stock_returns[j])
+        for j in range(latest_index - volatility_window + 1, latest_index + 1)
+    ]
+    latest_features = [
+        float(stock_returns[latest_index]),
+        float(market_returns[latest_index]),
+        float(stock_returns[latest_index]) - float(market_returns[latest_index]),
+    ]
+    for window in momentum_windows:
+        latest_features.append(log(stock[latest_index] / stock[latest_index - window]))
+    latest_features.append(stdev(latest_stock_returns) * sqrt(annualization_sessions))
+
     return {
         "status": "ok" if rows else "insufficient_data",
         "feature_names": feature_names,
         "horizon_sessions": horizon_sessions,
         "target_definition": "future stock log return minus future benchmark log return",
         "feature_cutoff": "close on row date; no future prices in features",
+        "latest_feature_row": {"date": dates[latest_index], "features": latest_features},
         "rows": rows,
     }
