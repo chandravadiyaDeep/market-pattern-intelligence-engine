@@ -286,6 +286,46 @@ def list_constituents(as_of: str | None = None, limit: int = 300) -> dict:
     }
 
 
+@app.get("/research/backtest-panel")
+def research_backtest_panel(
+    start_date: str,
+    end_date: str,
+    source_name: str,
+    benchmark_symbol: str = "NIFTY50",
+    horizon_sessions: int = 5,
+    volatility_window: int = 20,
+    momentum_windows: str = "5,20",
+    limit: int = 5000,
+) -> dict:
+    """Build a point-in-time historical cross-sectional panel from imported data."""
+    from .backtest_dataset import build_backtest_panel
+
+    if not 1 <= limit <= 20000:
+        raise HTTPException(status_code=422, detail="limit must be between 1 and 20000")
+    try:
+        windows = tuple(int(value.strip()) for value in momentum_windows.split(",") if value.strip())
+        if not windows or any(window < 1 for window in windows):
+            raise ValueError("momentum_windows must contain positive integers")
+        result = build_backtest_panel(
+            start_date=start_date,
+            end_date=end_date,
+            source_name=source_name,
+            benchmark_symbol=benchmark_symbol,
+            momentum_windows=windows,
+            volatility_window=volatility_window,
+            horizon_sessions=horizon_sessions,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    # Cap response size while retaining the full generated row count for auditability.
+    all_rows = result.get("rows", [])
+    result["rows"] = all_rows[:limit]
+    result["rows_returned"] = len(result["rows"])
+    result["truncated"] = len(all_rows) > limit
+    return result
+
+
 @app.get("/market-bars")
 def list_market_bars(symbol: str | None = None, limit: int = 500) -> dict:
     """Browse imported daily OHLCV records, newest first."""
