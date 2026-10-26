@@ -115,6 +115,19 @@ def init_db(db_path: str | Path | None = None) -> None:
         );
         CREATE INDEX IF NOT EXISTS idx_market_bars_symbol_date
             ON market_bars(symbol, session_date);
+        CREATE TABLE IF NOT EXISTS constituent_membership (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            symbol TEXT NOT NULL,
+            company_name TEXT NOT NULL,
+            start_date TEXT NOT NULL,
+            end_date TEXT,
+            source_name TEXT NOT NULL,
+            retrieved_at TEXT NOT NULL,
+            UNIQUE(symbol, start_date, source_name),
+            CHECK(end_date IS NULL OR end_date >= start_date)
+        );
+        CREATE INDEX IF NOT EXISTS idx_constituent_membership_dates
+            ON constituent_membership(start_date, end_date, symbol);
         CREATE TABLE IF NOT EXISTS paper_orders (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             symbol TEXT NOT NULL,
