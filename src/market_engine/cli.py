@@ -62,11 +62,19 @@ def main() -> None:
         init_db()
         result = classify_source_documents(aliases_path=args.aliases, dry_run=args.dry_run)
         print(json.dumps(result, indent=2))
-    else:
+    elif args.command == "import-prices":
         if not args.file:
             parser.error("--file is required when command is import-prices")
         init_db()
         result = import_prices_csv(args.file, source_name=args.source, dry_run=args.dry_run)
+        print(json.dumps(result, indent=2))
+        if result["invalid_rows"]:
+            raise SystemExit(1)
+    else:
+        if not args.file:
+            parser.error("--file is required when command is import-constituents")
+        init_db()
+        result = import_constituents_csv(args.file, source_name=args.source, dry_run=args.dry_run)
         print(json.dumps(result, indent=2))
         if result["invalid_rows"]:
             raise SystemExit(1)
