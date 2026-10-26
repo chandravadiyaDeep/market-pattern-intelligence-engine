@@ -27,6 +27,7 @@ Open the API explorer at http://127.0.0.1:8000/docs.
 - Structured event timeline with evidence confidence, materiality and verification status.
 - CSV import for manually curated or otherwise permitted event datasets.
 - RSS/Atom ingestion pipeline for official NSE announcements, corporate actions, board meetings and financial results, plus market-specific news feeds; includes dry-run mode, timestamp normalization, source metadata storage and duplicate detection.
+- Transparent keyword-based headline triage that creates a human-review queue of possible corporate events; issuer aliases are configurable in `config/company_aliases.yaml`, and candidates are never automatically treated as verified events.
 - Descriptive event-frequency exploration over a lookback window.
 - Transparent smoothed historical base-rate estimates.
 - Point-in-time market features: daily returns, trailing momentum, annualized realized volatility and benchmark-relative returns.
@@ -51,6 +52,12 @@ market-engine fetch-feeds --dry-run
 
 # Fetch configured RSS feeds and store source metadata
 market-engine fetch-feeds
+
+# Preview rule-based event candidates from stored headlines without writing
+market-engine classify-news --dry-run
+
+# Create pending-review candidates from stored headlines
+market-engine classify-news
 
 # Validate the synthetic example (not real market data)
 market-engine import-prices --file .\\examples\\sample_prices.csv --source synthetic-demo --dry-run
@@ -101,4 +108,4 @@ Begin with small manually curated datasets or sources whose terms permit the int
 
 ## Important limitations
 
-The repository now includes a configurable RSS/Atom metadata-ingestion pipeline and a validated CSV importer for daily OHLCV history. It does **not yet** include a dedicated NSE/BSE filings connector, a historical Nifty 50 constituent loader, a licensed live or historical price feed, automatic event extraction and verification, a validated corporate-event prediction model, or a complete return-aware walk-forward strategy simulator. The included sample prices are synthetic only. The initial enabled feeds are general news feeds, not a complete or guaranteed Nifty 50 feed. The market-feature utilities are not yet connected to a persisted historical price store.
+The repository now includes a configurable RSS/Atom metadata-ingestion pipeline, a rule-based event-candidate review queue, and a validated CSV importer for daily OHLCV history. The event-candidate rules and starter company alias list are deliberately incomplete and need ongoing validation. It does **not yet** include a dedicated NSE/BSE filings connector, a historical Nifty 50 constituent loader, a licensed live or historical price feed, automatic event extraction and verification, a validated corporate-event prediction model, or a complete return-aware walk-forward strategy simulator. The included sample prices are synthetic only. The initial enabled feeds are general news feeds, not a complete or guaranteed Nifty 50 feed. The market-feature utilities are not yet connected to a persisted historical price store.
