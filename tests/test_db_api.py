@@ -1,4 +1,5 @@
 """Tests for database setup and local API behavior."""
+import pytest
 from fastapi.testclient import TestClient
 from market_engine.api import app
 from market_engine import api as api_module
