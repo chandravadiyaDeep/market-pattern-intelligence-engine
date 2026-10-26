@@ -99,6 +99,73 @@ def add_source(source: SourceDocumentIn) -> dict:
     return {"id": source_id, "title": source.title}
 
 
+@app.get("/event-candidates")
+def list_event_candidates(
+    symbol: str | None = None,
+    status: str = "pending_review",
+    limit: int = 100,
+) -> dict:
+    """Browse heuristic headline matches awaiting human review."""
+    allowed_statuses = {"pending_review", "accepted", "rejected", "all"}
+    if status not in allowed_statuses:
+        raise HTTPException(status_code=422, detail="status must be pending_review, accepted, rejected, or all")
+    if not 1 <= limit <= 500:
+        raise HTTPException(status_code=422, detail="limit must be 1..500")
+    query = "SELECT * FROM event_candidates WHERE 1=1"
+    params: list = []
+    if status != "all":
+        query += " AND status=?"
+        params.append(status)
+    if symbol:
+        query += " AND symbol=?"
+        params.append(symbol.strip().upper())
+    query += " ORDER BY COALESCE(disclosed_at, created_at) DESC LIMIT ?"
+    params.append(limit)
+    with connect() as conn:
+        rows = conn.execute(query, params).fetchall()
+    return {"items": [row_to_dict(row) for row in rows], "count": len(rows)}
+
+
+@app.post("/event-candidates/{candidate_id}/review")
+def review_event_candidate(
+    candidate_id: int,
+    decision: str = Query(..., pattern="^(accept|reject)$"),
+) -> dict:
+    """Accept a candidate into the unverified event ledger or reject it explicitly."""
+    with connect() as conn:
+        candidate = conn.execute(
+            "SELECT * FROM event_candidates WHERE id=?", (candidate_id,)
+        ).fetchone()
+        if candidate is None:
+            raise HTTPException(status_code=404, detail="Event candidate not found")
+        if candidate["status"] != "pending_review":
+            raise HTTPException(status_code=409, detail="Candidate has already been reviewed")
+        reviewed_at = now_iso()
+        event_id = None
+        if decision == "accept":
+            cur = conn.execute(
+                """INSERT INTO events
+                (symbol,event_type,title,summary,disclosed_at,source_id,
+                 evidence_confidence,materiality,status,created_at)
+                VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                (candidate["symbol"], candidate["event_type"], candidate["title"],
+                 candidate["summary"], candidate["disclosed_at"], candidate["source_id"],
+                 0.5, 1, "unverified", reviewed_at),
+            )
+            event_id = int(cur.lastrowid)
+        conn.execute(
+            "UPDATE event_candidates SET status=?, reviewed_at=? WHERE id=?",
+            ("accepted" if decision == "accept" else "rejected", reviewed_at, candidate_id),
+        )
+    return {
+        "candidate_id": candidate_id,
+        "decision": decision,
+        "event_id": event_id,
+        "event_status": "unverified" if event_id is not None else None,
+        "note": "Accepted candidates remain unverified until the underlying disclosure is checked.",
+    }
+
+
 @app.post("/events", status_code=201)
 def add_event(event: EventIn) -> dict:
     """Store one structured event and preserve disclosure time."""
