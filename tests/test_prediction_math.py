@@ -1,5 +1,4 @@
 """Tests for feature timing, ridge fitting, and chronological model evaluation."""
-import math
 from datetime import date, timedelta
 
 import pytest
@@ -18,8 +17,8 @@ def test_dataset_target_is_future_excess_return_and_features_stop_at_date():
     row = next(item for item in result["rows"] if item["date"] == dates[22])
     original_features = row["features"]
     changed = dict(stock)
-    for date in dates[23:]:
-        changed[date] *= 1.5
+    for date_string in dates[23:]:
+        changed[date_string] *= 1.5
     changed_result = build_prediction_dataset(changed, market, horizon_sessions=3)
     changed_row = next(item for item in changed_result["rows"] if item["date"] == dates[22])
     assert changed_row["features"] == pytest.approx(original_features)
