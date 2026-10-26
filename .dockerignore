@@ -1,0 +1,17 @@
+# Keep local environment, credentials and databases out of the image.
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.git/
+.vscode/
+.idea/
+data/
+*.sqlite
+*.sqlite3
+*.db
+tests/
