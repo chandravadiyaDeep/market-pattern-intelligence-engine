@@ -83,7 +83,7 @@ def test_unmatched_headline_is_not_reprocessed_forever(tmp_path):
             ("news_rss", "Reliance opens a new consumer website",
              "https://example.com/website", "2026-10-20T09:00:00+00:00",
              "2026-10-20T09:01:00+00:00", "2026-10-20T09:01:00+00:00",
-             "unmatched-test-hash", "A website launch with no event keywords.", "2026-10-20T09:01:00+00:00"),
+             "unmatched-test-hash", "A general company profile update.", "2026-10-20T09:01:00+00:00"),
         )
     first = classify_source_documents(db_file)
     assert first["unmatched"] == 1
