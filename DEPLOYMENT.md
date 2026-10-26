@@ -1,72 +1,99 @@
-# Deployment guide (personal research API)
+# Deployment guide — Vercel + Render + Supabase
 
-This repository is a **FastAPI backend**, not a finished public website. Deploy the API service first; its interactive API interface is served at `/docs`.
+This repository currently contains a **FastAPI research API**, not a finished web dashboard. Deploying it on Render makes the API reachable; Vercel should host a separate frontend project when one exists.
 
-## Recommended first host: Railway
+## Important database status (read before deploying)
 
-Railway can deploy this repository from GitHub and supports persistent volumes. The Docker image is configured to store SQLite at `/data/mpie.sqlite3`; without a volume, database changes can disappear on redeploy. See the current Railway guide: https://docs.railway.com/guides/fastapi and volume guide: https://docs.railway.com/volumes.
+The current code in `src/market_engine/db.py` uses Python's built-in `sqlite3` and creates a local SQLite file. Adding Supabase environment variables does **not** migrate this code to PostgreSQL. Do not deploy this API expecting Supabase to store its research data until the database layer has been ported and tested against PostgreSQL.
 
-### 1. Before deploying
+For the initial stack, the intended roles are:
 
-- Push the latest `main` branch to GitHub.
-- Confirm the GitHub Actions test workflow passes.
-- Have source-permitted price data and verified constituent membership ready for import later. Do not put licensed data dumps or a local SQLite database into Git.
+- **Vercel:** frontend/dashboard (deploy the frontend project or repository that contains the actual frontend; this repository currently does not contain a Vercel-ready frontend project).
+- **Render:** long-running FastAPI API service, built from this repository's Dockerfile.
+- **Supabase:** managed PostgreSQL database, and optionally Supabase Auth for user accounts in a later phase.
 
-### 2. Create the service
+If you need to deploy the current SQLite-based API before the PostgreSQL migration, use a Render persistent disk mounted at `/data` and set `MPIE_DATABASE_PATH=/data/mpie.sqlite3`. Render's filesystem is ephemeral unless persistent storage is configured. This temporary route uses Render storage, not Supabase Postgres.
 
-1. Sign in to Railway and create a new project.
-2. Choose **Deploy from GitHub repo** and select `chandravadiyaDeep/market-pattern-intelligence-engine`.
-3. Let Railway build using the repository's `Dockerfile`.
-4. In the service's **Volumes** settings, create a volume mounted at `/data`.
-5. In service variables, set:
+## A. Create Supabase project
+
+1. Open https://supabase.com/dashboard and create a project.
+2. Save the database password securely. Never commit it to GitHub or put it in browser code.
+3. Open **Connect** in the Supabase dashboard and copy the connection string that matches your network. Render services may be on IPv4-only networks, so if the direct connection does not work, select the **Session pooler** connection string in Supabase rather than constructing a hostname manually. Follow Supabase's current connection instructions: https://supabase.com/docs/guides/database/connecting-to-postgres.
+4. Keep the connection string private. A frontend must never receive the database password or a privileged server key.
+
+**Note:** this step creates the managed database, but the current SQLite schema and queries have not yet been converted to PostgreSQL. Do not set an unused `DATABASE_URL` and assume the application is using it.
+
+## B. Deploy the API on Render
+
+The repository already has a Dockerfile and binds Uvicorn to the platform-provided `PORT`.
+
+1. Open https://render.com and sign in.
+2. Choose **New → Web Service**, connect GitHub, and select `chandravadiyaDeep/market-pattern-intelligence-engine`.
+3. Choose **Docker** as the runtime/build method and use the root `Dockerfile`.
+4. Set the health check path to `/health`.
+5. For the current SQLite-based version, attach a persistent disk mounted at `/data`. Check current pricing first; persistent disks may require a paid Render service. Render disk docs: https://render.com/docs/disks.
+6. Under **Environment**, set:
    - `MPIE_MODE=production`
    - `MPIE_DATABASE_PATH=/data/mpie.sqlite3`
-   - `MPIE_API_KEY` to a randomly generated secret with at least 32 characters.
-6. Generate a public domain from the service's networking settings.
-7. Redeploy if the platform does not automatically apply the variables/volume changes.
+   - `MPIE_API_KEY` = a generated secret of at least 32 characters
+7. Generate the secret on your Windows computer in PowerShell:
 
-Generate a strong API key locally in PowerShell; do not commit or send it in chat:
+   ```powershell
+   # Generate a cryptographically strong API key; do not commit it.
+   python -c "import secrets; print(secrets.token_urlsafe(48))"
+   ```
 
-```powershell
-# Generate a cryptographically random 32-byte key and print it once.
-python -c "import secrets; print(secrets.token_urlsafe(48))"
-```
+8. Copy the printed key directly into Render's environment variables. Do not send it in chat, commit it, or put it in frontend JavaScript.
+9. Deploy and wait for Render to report that the service is live.
 
-Store the result only in Railway's service variables. Never put it in GitHub source code, screenshots, or a committed `.env` file.
+### Verify the Render API
 
-### 3. Verify deployment
-
-Replace `YOUR-RAILWAY-DOMAIN` with the domain Railway generated.
+Replace the placeholder with your actual Render service URL:
 
 ```powershell
-# Public health check does not require the API key.
-Invoke-RestMethod "https://YOUR-RAILWAY-DOMAIN/health"
+# Public health check; expected JSON includes status = ok.
+Invoke-RestMethod "https://YOUR-RENDER-SERVICE.onrender.com/health"
 
-# Protected endpoints require the X-API-Key header.
+# Example authenticated request. Keep the key local and private.
 $headers = @{ "X-API-Key" = "PASTE-YOUR-KEY-LOCALLY" }
-Invoke-RestMethod "https://YOUR-RAILWAY-DOMAIN/research-sources" -Headers $headers
+Invoke-RestMethod "https://YOUR-RENDER-SERVICE.onrender.com/research-sources" -Headers $headers
 ```
 
-Open `https://YOUR-RAILWAY-DOMAIN/docs`, select **Authorize**, enter the same API key, and test a read-only endpoint. The key is required for all API routes except `/health` and the documentation assets when configured.
+Open `https://YOUR-RENDER-SERVICE.onrender.com/docs`, select **Authorize**, and enter the same API key to try protected routes. Treat the API key as a personal-access gate, not full user authentication.
 
-### 4. Data and operating notes
+## C. Deploy a frontend on Vercel
 
-- SQLite is suitable for a single-instance personal research service at this stage. Keep the Railway service to one instance when using a mounted volume.
-- Back up the database and test restoring it before relying on the service. A volume is persistence, not a complete backup strategy.
-- Do not use a public deployment without setting `MPIE_API_KEY`; production mode refuses to start if a key of at least 32 characters is missing.
-- API-key authentication is a basic personal-access gate, not multi-user authentication or role-based access control. Do not expose this API to untrusted users as a commercial service without a stronger security review.
-- No live trading or broker connection is included.
-- Feed ingestion is not automatically scheduled by deployment. Run it manually or add a separate scheduled worker only after validating source terms and failure handling.
-- The API currently stores research records locally in SQLite. This is not yet a multi-user, high-availability architecture.
+There is no Vercel-ready frontend in this repository at the moment. Do not import this Python-only repository as a Next.js project expecting a dashboard to appear.
 
-## Alternative: Render
+When the frontend project is ready:
 
-Render can also deploy the Docker image, but its filesystem is ephemeral by default. SQLite requires a persistent disk attached at `/data`, and Render documents persistent disks as available for paid web services. Review current plan pricing and storage terms before selecting it: https://render.com/docs/disks.
+1. Open https://vercel.com and choose **Add New → Project**.
+2. Import the GitHub repository that contains the actual frontend.
+3. Select its framework preset and set the **Root Directory** to the frontend app directory (for example, `web` or `frontend`, only if that directory really exists in that repository).
+4. Add a frontend environment variable such as `NEXT_PUBLIC_API_BASE_URL` with the Render API base URL, for example `https://YOUR-RENDER-SERVICE.onrender.com`.
+5. Configure frontend requests to send `X-API-Key` only for a private personal prototype. **Do not bake a permanent private API key into `NEXT_PUBLIC_*` variables or browser JavaScript.** For a multi-user application, add server-side authentication/authorization and a secure server-side API proxy instead.
+6. Deploy and test a read-only route from the deployed frontend.
 
-## What is not included
+Vercel's Git-connected deployments are documented at https://vercel.com/docs/deployments.
 
-- A frontend dashboard or custom domain.
-- A verified historical Nifty 50 membership dataset.
-- A licensed historical market-data subscription.
-- Scheduled ingestion, monitoring alerts, managed database migrations or automated backups.
-- Proof of predictive edge or a production trading strategy.
+## D. Connect the API to Supabase — required migration work
+
+The API currently uses SQLite-specific SQL and `sqlite3`. Before Supabase can be the actual database, the code needs a dedicated PostgreSQL migration, including:
+
+- Add a PostgreSQL driver and environment setting for the Supabase connection string.
+- Replace the SQLite connection/initialization layer with a PostgreSQL-compatible repository or database abstraction.
+- Migrate SQLite-specific schema details such as `INTEGER PRIMARY KEY AUTOINCREMENT`, placeholder syntax, and SQLite-specific query behavior.
+- Add and test schema migrations; do not rely on `init_db()` running SQLite DDL against Postgres.
+- Run tests against both the local test database and a temporary/isolated Postgres database before changing production.
+- Import existing approved research records explicitly; creating a Supabase project does not copy the local SQLite file into Postgres.
+- Keep the database password and any service-role key on the server only. If Supabase Auth is later enabled for users, enforce authorization on the backend and database rather than trusting a client-supplied user ID.
+
+Until this work is complete, **the deployed application uses SQLite on Render's disk** and Supabase is created but not used by the API data layer.
+
+## E. What is and is not ready
+
+Ready in the repository: FastAPI API, health endpoint, `/docs`, API-key check, Docker image, test/lint workflow.
+
+Not automatically supplied by deployment: Vercel dashboard UI, PostgreSQL-compatible database layer, historical market prices, verified historical Nifty 50 membership, corporate event imports, scheduled ingestion, multi-user authentication, automated backups, or evidence of a profitable trading strategy.
+
+Keep the Render service to one instance while using SQLite. Back up the database separately; a persistent disk is not a backup. The service is for research and paper simulation only and does not place live trades.
