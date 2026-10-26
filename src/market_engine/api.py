@@ -205,6 +205,56 @@ def list_events(symbol: str | None = None, limit: int = 100) -> dict:
     return {"items": [row_to_dict(row) for row in rows], "count": len(rows)}
 
 
+@app.get("/research/event-study")
+def research_event_study(
+    benchmark_symbol: str = "NIFTY50",
+    horizons: str = "1,3,5,10,20",
+    limit: int = 1000,
+) -> dict:
+    """Measure historical benchmark-relative returns after verified disclosures."""
+    from .event_study import run_event_study
+
+    if not 1 <= limit <= 5000:
+        raise HTTPException(status_code=422, detail="limit must be between 1 and 5000")
+    try:
+        horizon_values = tuple(int(value.strip()) for value in horizons.split(",") if value.strip())
+        if not horizon_values or any(value < 1 for value in horizon_values):
+            raise ValueError("horizons must be positive integers")
+        if len(set(horizon_values)) != len(horizon_values):
+            raise ValueError("horizons must be unique")
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail="horizons must be unique positive comma-separated integers") from exc
+
+    with connect() as conn:
+        # Only explicitly verified events enter the primary analysis to limit label contamination.
+        event_rows = conn.execute(
+            """SELECT id,symbol,event_type,disclosed_at FROM events
+            WHERE status='verified' AND disclosed_at IS NOT NULL
+            ORDER BY disclosed_at ASC LIMIT ?""",
+            (limit,),
+        ).fetchall()
+        bar_rows = conn.execute(
+            """SELECT symbol,session_date,COALESCE(adjusted_close,close) AS price
+            FROM market_bars ORDER BY symbol,session_date ASC"""
+        ).fetchall()
+    prices: dict[str, dict[str, float]] = {}
+    for row in bar_rows:
+        prices.setdefault(str(row["symbol"]).strip().upper(), {})[row["session_date"]] = float(row["price"])
+    events = [dict(row) for row in event_rows]
+    try:
+        result = run_event_study(events, prices, benchmark_symbol, horizon_values)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    result["verified_events_loaded"] = len(events)
+    result["price_rows_loaded"] = len(bar_rows)
+    result["price_basis"] = "adjusted_close_when_available_else_close"
+    result["note"] = (
+        "No forecast is generated. Import price history for each issuer and the benchmark, "
+        "and explicitly verify events before interpreting results."
+    )
+    return result
+
+
 @app.get("/market-bars")
 def list_market_bars(symbol: str | None = None, limit: int = 500) -> dict:
     """Browse imported daily OHLCV records, newest first."""
