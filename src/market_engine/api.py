@@ -352,13 +352,16 @@ def research_predictive_baseline(
     if normalized_symbol == normalized_benchmark:
         raise HTTPException(status_code=422, detail="symbol and benchmark_symbol must differ")
 
+    rows = []
     with connect() as conn:
-        rows = conn.execute(
-            """SELECT symbol,session_date,COALESCE(adjusted_close,close) AS price
-            FROM market_bars WHERE symbol IN (?,?)
-            ORDER BY session_date ASC LIMIT ?""",
-            (normalized_symbol, normalized_benchmark, limit * 2),
-        ).fetchall()
+        # Apply the row limit per instrument so one symbol cannot crowd out the benchmark.
+        for requested_symbol in (normalized_symbol, normalized_benchmark):
+            rows.extend(conn.execute(
+                """SELECT symbol,session_date,COALESCE(adjusted_close,close) AS price
+                FROM market_bars WHERE symbol=?
+                ORDER BY session_date ASC LIMIT ?""",
+                (requested_symbol, limit),
+            ).fetchall())
     prices: dict[str, dict[str, float]] = {}
     for row in rows:
         prices.setdefault(str(row["symbol"]).strip().upper(), {})[row["session_date"]] = float(row["price"])
