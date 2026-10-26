@@ -1,5 +1,5 @@
 """FastAPI endpoints for local research workflows."""
-from datetime import datetime
+from datetime import date, datetime
 from fastapi import FastAPI, HTTPException, Query
 from .db import connect, init_db, now_iso, row_to_dict
 from .models import EventIn, PredictionIn, PaperOrderIn, SourceDocumentIn
@@ -253,6 +253,37 @@ def research_event_study(
         "and explicitly verify events before interpreting results."
     )
     return result
+
+
+@app.get("/universe/constituents")
+def list_constituents(as_of: str | None = None, limit: int = 300) -> dict:
+    """List constituents active on a requested date using imported membership intervals."""
+    if not 1 <= limit <= 1000:
+        raise HTTPException(status_code=422, detail="limit must be 1..1000")
+    try:
+        # Explicit dates make historical universe queries reproducible.
+        effective_date = date.fromisoformat(as_of).isoformat() if as_of else date.today().isoformat()
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail="as_of must use YYYY-MM-DD") from exc
+
+    with connect() as conn:
+        rows = conn.execute(
+            """SELECT symbol,company_name,start_date,end_date,source_name,retrieved_at
+            FROM constituent_membership
+            WHERE start_date<=? AND (end_date IS NULL OR end_date>=?)
+            ORDER BY symbol, start_date DESC, retrieved_at DESC LIMIT ?""",
+            (effective_date, effective_date, limit),
+        ).fetchall()
+    # A symbol may be present from more than one source; return its newest applicable row.
+    unique_rows = {}
+    for row in rows:
+        unique_rows.setdefault(row["symbol"], row_to_dict(row))
+    return {
+        "as_of": effective_date,
+        "items": list(unique_rows.values()),
+        "count": len(unique_rows),
+        "note": "Membership reflects imported source records; verify source coverage and dates.",
+    }
 
 
 @app.get("/market-bars")
