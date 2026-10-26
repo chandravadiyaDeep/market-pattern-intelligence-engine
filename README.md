@@ -100,7 +100,7 @@ Maintain source links in [resources/RESEARCH_SOURCES.md](resources/RESEARCH_SOUR
 - `POST /paper-orders` and `GET /paper-orders`
 - `POST /paper-orders/{id}/fill` (simulated only)
 
-See [the mathematical framework](docs/MATHEMATICAL_FRAMEWORK.md) for return definitions, event-study formulas, ridge objective, assumptions, and validation gates.
+See [the mathematical framework](docs/MATHEMATICAL_FRAMEWORK.md) for return definitions, event-study formulas, ridge objective, assumptions, and validation gates. See [historical universe data guidance](docs/HISTORICAL_UNIVERSE.md) for membership CSV format, import commands, and point-in-time cautions.
 
 ## Research safeguards
 
