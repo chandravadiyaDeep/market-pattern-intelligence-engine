@@ -77,6 +77,12 @@ uvicorn market_engine.api:app --reload
 
 CSV required columns: `symbol,event_type,title,summary`. Optional columns: `event_at,disclosed_at,evidence_confidence,materiality,status`. Timestamp strings should include an explicit UTC offset. Imported events are not automatically fact-checked.
 
+## Deployment
+
+This repository is a FastAPI backend, not a finished frontend website. For a personal hosted API, see [DEPLOYMENT.md](DEPLOYMENT.md). The included Dockerfile and Railway configuration use a persistent volume mounted at `/data` for SQLite. Set `MPIE_MODE=production`, `MPIE_DATABASE_PATH=/data/mpie.sqlite3`, and a secret `MPIE_API_KEY` of at least 32 characters in the host's environment settings before exposing a public domain. Keep the service to one instance while using SQLite on a mounted volume.
+
+The deployment configuration does not provide historical market data, automatic feed scheduling, multi-user authentication, or a validated trading strategy. Do not commit local databases, API keys, or licensed data files.
+
 ## Research source links
 
 Maintain source links in [resources/RESEARCH_SOURCES.md](resources/RESEARCH_SOURCES.md). The machine-readable registry is [config/research_sources.yaml](config/research_sources.yaml). Only entries under feeds with enabled set to true are fetched by the RSS pipeline. The initial feeds are general news feeds, not a complete or verified Nifty 50 event feed.
