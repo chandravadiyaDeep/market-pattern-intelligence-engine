@@ -183,3 +183,41 @@ def test_event_candidate_review_accepts_as_unverified_event(tmp_path, monkeypatc
         assert candidate_row["status"] == "accepted"
     repeated = client.post(f"/event-candidates/{candidate_id}/review?decision=reject")
     assert repeated.status_code == 409
+
+
+
+def test_event_study_endpoint_requires_verified_events_and_price_history(tmp_path, monkeypatch):
+    """The study uses verified events only and reports data gaps instead of guessing."""
+    db_file = tmp_path / "event-study.sqlite3"
+    monkeypatch.setattr(api_module, "connect", lambda: connect(db_file))
+    init_db(db_file)
+    with connect(db_file) as conn:
+        # Unverified records must not silently enter the primary event study.
+        conn.execute(
+            """INSERT INTO events
+            (symbol,event_type,title,summary,disclosed_at,status,created_at)
+            VALUES (?,?,?,?,?,?,?)""",
+            ("TCS", "other", "Unverified test event", "test", "2026-01-01T12:00:00+00:00",
+             "unverified", "2026-01-01T12:00:00+00:00"),
+        )
+        conn.execute(
+            """INSERT INTO market_bars
+            (symbol,session_date,open,high,low,close,adjusted_close,volume,source_name,retrieved_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?)""",
+            ("NIFTY50", "2026-01-01", 100, 101, 99, 100, 100, 1000, "test", "2026-01-01T00:00:00+00:00"),
+        )
+        conn.execute(
+            """INSERT INTO market_bars
+            (symbol,session_date,open,high,low,close,adjusted_close,volume,source_name,retrieved_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?)""",
+            ("NIFTY50", "2026-01-02", 101, 102, 100, 101, 101, 1000, "test", "2026-01-02T00:00:00+00:00"),
+        )
+    client = TestClient(app)
+    response = client.get("/research/event-study?horizons=1,3")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["verified_events_loaded"] == 0
+    assert payload["status"] == "insufficient_data"
+    assert "No forecast is generated" in payload["note"]
+    invalid = client.get("/research/event-study?horizons=0,2")
+    assert invalid.status_code == 422
