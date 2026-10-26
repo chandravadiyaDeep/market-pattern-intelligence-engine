@@ -1,6 +1,4 @@
 """Mathematical tests for the general benchmark-relative event study."""
-import math
-
 import pytest
 
 from market_engine.event_study import run_event_study
