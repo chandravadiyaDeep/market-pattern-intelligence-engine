@@ -24,7 +24,7 @@ def _summarize(values: list[float]) -> dict[str, float | int | None]:
         return {
             "observations": 0, "mean_abnormal_return": None, "median_abnormal_return": None,
             "standard_deviation": None, "standard_error": None, "t_statistic": None,
-            "ci95_low": None, "ci95_high": None,
+            "ci95_low_log_return": None, "ci95_high_log_return": None,
         }
     # Convert log-relative return to relative wealth return only after summing daily log returns.
     relative_returns = [exp(value) - 1.0 for value in values]
@@ -40,8 +40,8 @@ def _summarize(values: list[float]) -> dict[str, float | int | None]:
         "standard_error": standard_error,
         # This is a diagnostic t-statistic; small samples need a Student-t interval instead.
         "t_statistic": average_log_return / standard_error if standard_error else None,
-        "ci95_low": average_log_return - 1.96 * standard_error if standard_error is not None else None,
-        "ci95_high": average_log_return + 1.96 * standard_error if standard_error is not None else None,
+        "ci95_low_log_return": average_log_return - 1.96 * standard_error if standard_error is not None else None,
+        "ci95_high_log_return": average_log_return + 1.96 * standard_error if standard_error is not None else None,
     }
 
 
