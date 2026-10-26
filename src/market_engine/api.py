@@ -332,6 +332,101 @@ def save_prediction(prediction: PredictionIn) -> dict:
     return {"id": prediction_id, "as_of": prediction.as_of.isoformat(), "status": "forecast_saved"}
 
 
+@app.get("/research/predictive-baseline/{symbol}")
+def research_predictive_baseline(
+    symbol: str,
+    benchmark_symbol: str = "NIFTY50",
+    horizon_sessions: int = 5,
+    limit: int = 5000,
+) -> dict:
+    """Run a numeric excess-return baseline with expanding-window out-of-sample evaluation."""
+    from .prediction_dataset import build_prediction_dataset
+    from .ridge_model import fit_ridge, predict_ridge, walk_forward_ridge
+
+    if not 1 <= limit <= 5000:
+        raise HTTPException(status_code=422, detail="limit must be between 1 and 5000")
+    if not 1 <= horizon_sessions <= 60:
+        raise HTTPException(status_code=422, detail="horizon_sessions must be between 1 and 60")
+    normalized_symbol = symbol.strip().upper()
+    normalized_benchmark = benchmark_symbol.strip().upper()
+    if normalized_symbol == normalized_benchmark:
+        raise HTTPException(status_code=422, detail="symbol and benchmark_symbol must differ")
+
+    with connect() as conn:
+        rows = conn.execute(
+            """SELECT symbol,session_date,COALESCE(adjusted_close,close) AS price
+            FROM market_bars WHERE symbol IN (?,?)
+            ORDER BY session_date ASC LIMIT ?""",
+            (normalized_symbol, normalized_benchmark, limit * 2),
+        ).fetchall()
+    prices: dict[str, dict[str, float]] = {}
+    for row in rows:
+        prices.setdefault(str(row["symbol"]).strip().upper(), {})[row["session_date"]] = float(row["price"])
+    if normalized_symbol not in prices or normalized_benchmark not in prices:
+        return {
+            "status": "insufficient_data",
+            "reason": "Import authorized historical prices for both the stock and benchmark first.",
+            "symbol": normalized_symbol,
+            "benchmark_symbol": normalized_benchmark,
+            "price_rows_loaded": len(rows),
+        }
+    try:
+        dataset = build_prediction_dataset(
+            prices[normalized_symbol], prices[normalized_benchmark],
+            horizon_sessions=horizon_sessions,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if dataset["status"] != "ok":
+        return {
+            "status": "insufficient_data",
+            "reason": dataset.get("reason", "No usable labeled rows were built."),
+            "symbol": normalized_symbol,
+            "benchmark_symbol": normalized_benchmark,
+            "horizon_sessions": horizon_sessions,
+        }
+
+    rows_for_model = dataset["rows"]
+    evaluation = walk_forward_ridge(
+        rows_for_model, train_fraction=0.7, ridge_alpha=1.0, minimum_training_rows=30
+    )
+    response = {
+        "status": evaluation["status"],
+        "symbol": normalized_symbol,
+        "benchmark_symbol": normalized_benchmark,
+        "horizon_sessions": horizon_sessions,
+        "feature_names": dataset["feature_names"],
+        "target_definition": dataset["target_definition"],
+        "feature_cutoff": dataset["feature_cutoff"],
+        "labeled_rows": len(rows_for_model),
+        "walk_forward_evaluation": evaluation,
+        "warning": (
+            "Research baseline only, not a trading recommendation. Compare out-of-sample metrics "
+            "with the zero-excess-return baseline; overlapping targets can require purged validation."
+        ),
+    }
+    # Do not publish a current estimate until the expanding-window test has enough observations.
+    if evaluation["status"] != "ok":
+        return response
+    model = fit_ridge(
+        [item["features"] for item in rows_for_model],
+        [item["target_forward_excess_log_return"] for item in rows_for_model],
+        ridge_alpha=1.0,
+    )
+    latest = dataset["latest_feature_row"]
+    predicted_log_excess = predict_ridge(model, latest["features"])
+    from math import exp
+    response["latest_estimate"] = {
+        "as_of_session": latest["date"],
+        "predicted_forward_excess_log_return": predicted_log_excess,
+        "predicted_relative_wealth_return": exp(predicted_log_excess) - 1.0,
+        "model": model["method"],
+        "model_training_rows": model["training_rows"],
+        "note": "A point estimate, not a probability; assess stability and uncertainty before interpretation.",
+    }
+    return response
+
+
 @app.get("/predictions")
 def list_predictions(limit: int = 100) -> dict:
     """Return stored forecasts newest first."""
