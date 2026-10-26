@@ -31,6 +31,7 @@ Open the API explorer at http://127.0.0.1:8000/docs.
 - Descriptive event-frequency exploration over a lookback window.
 - Transparent smoothed historical base-rate estimates.
 - Point-in-time market features: daily returns, trailing momentum, annualized realized volatility and benchmark-relative returns.
+- General event-study engine that measures post-disclosure stock returns against a benchmark across multiple horizons, for any event category with verified timestamps and sufficient price history.
 - Brier score, log loss and chronological train/test splitting utilities.
 - Timestamped forecasts with outcomes recorded separately and immutable once resolved.
 - Paper-order ledger with explicitly simulated fills; no broker or live order placement.
@@ -83,6 +84,7 @@ Maintain source links in [resources/RESEARCH_SOURCES.md](resources/RESEARCH_SOUR
 - `POST /event-candidates/{id}/review?decision=accept|reject` (accepted records remain unverified)
 - `GET /pipeline/feeds` (configuration only; does not trigger a network fetch)
 - `GET /research-sources` (source-link catalog)
+- `GET /research/event-study?benchmark_symbol=NIFTY50&horizons=1,3,5,10,20` (verified/corroborated event study; no forecast generated)
 - `GET /market-bars`
 - `GET /market-bars/{symbol}/features`
 - `POST /events` and `GET /events`
@@ -92,6 +94,8 @@ Maintain source links in [resources/RESEARCH_SOURCES.md](resources/RESEARCH_SOUR
 - `GET /patterns/event-counts`
 - `POST /paper-orders` and `GET /paper-orders`
 - `POST /paper-orders/{id}/fill` (simulated only)
+
+See [the mathematical framework](docs/MATHEMATICAL_FRAMEWORK.md) for return definitions, event-study formulas, assumptions, and validation gates.
 
 ## Research safeguards
 
