@@ -138,3 +138,48 @@ def test_research_sources_endpoint_returns_link_catalog():
     assert any(item["id"] == "nse_announcements" for item in items)
     assert any(item["id"] == "google_trends" for item in items)
     assert all(item["url"].startswith("https://") for item in items)
+
+
+
+def test_event_candidate_review_accepts_as_unverified_event(tmp_path, monkeypatch):
+    """A reviewed candidate becomes an event but is not marked as fact-verified."""
+    db_file = tmp_path / "review.sqlite3"
+    monkeypatch.setattr(api_module, "connect", lambda: connect(db_file))
+    init_db(db_file)
+    with connect(db_file) as conn:
+        source = conn.execute(
+            """INSERT INTO source_documents
+            (source_type,title,url,published_at,first_seen_at,retrieved_at,content_hash,
+             text_excerpt,created_at)
+            VALUES (?,?,?,?,?,?,?,?,?)""",
+            ("news_rss", "Reliance announces quarterly results",
+             "https://example.com/reliance-results", "2026-10-20T09:00:00+00:00",
+             "2026-10-20T09:01:00+00:00", "2026-10-20T09:01:00+00:00",
+             "review-test-hash", "Quarterly results were announced.", "2026-10-20T09:01:00+00:00"),
+        )
+        source_id = int(source.lastrowid)
+        candidate = conn.execute(
+            """INSERT INTO event_candidates
+            (source_id,symbol,event_type,title,summary,disclosed_at,matched_alias,
+             matched_terms,rule_strength,classifier_version,status,created_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (source_id, "RELIANCE", "earnings", "Reliance announces quarterly results",
+             "Quarterly results were announced.", "2026-10-20T09:00:00+00:00",
+             "Reliance", '["quarterly results"]', 1, "rules-0.1.0",
+             "pending_review", "2026-10-20T09:01:00+00:00"),
+        )
+        candidate_id = int(candidate.lastrowid)
+    client = TestClient(app)
+    queued = client.get("/event-candidates")
+    assert queued.status_code == 200
+    assert queued.json()["count"] == 1
+    accepted = client.post(f"/event-candidates/{candidate_id}/review?decision=accept")
+    assert accepted.status_code == 200
+    assert accepted.json()["event_status"] == "unverified"
+    with connect(db_file) as conn:
+        event = conn.execute("SELECT * FROM events WHERE id=?", (accepted.json()["event_id"],)).fetchone()
+        assert event["status"] == "unverified"
+        candidate_row = conn.execute("SELECT status FROM event_candidates WHERE id=?", (candidate_id,)).fetchone()
+        assert candidate_row["status"] == "accepted"
+    repeated = client.post(f"/event-candidates/{candidate_id}/review?decision=reject")
+    assert repeated.status_code == 409
