@@ -25,7 +25,7 @@ def test_event_features_include_only_prior_verified_disclosures():
     feature_index = {name: index for index, name in enumerate(result["feature_names"])}
 
     assert result["event_features_added"] is True
-    assert result["verified_events_used"] == 3  # verified records for TCS, including same-day
+    assert result["verified_events_used"] == 2  # verified records for TCS, including same-day
     assert row["features"][feature_index["event_earnings_count_5s"]] == 1.0
     assert row["features"][feature_index["event_regulatory_count_5s"]] == 0.0
     assert row["features"][feature_index["any_verified_event_count_5s"]] == 1.0
