@@ -1,5 +1,6 @@
 """Tests for feature timing, ridge fitting, and chronological model evaluation."""
 import math
+from datetime import date, timedelta
 
 import pytest
 
@@ -59,3 +60,23 @@ def test_ridge_rejects_bad_data_and_unsorted_walk_forward_rows():
             {"date": "2026-01-01", "features": [2.0], "target_forward_excess_log_return": 0.2},
             {"date": "2026-01-03", "features": [3.0], "target_forward_excess_log_return": 0.3},
         ], minimum_training_rows=1)
+
+
+
+def test_walk_forward_purges_training_labels_that_overlap_test_date():
+    """Every training target must have resolved before the test feature timestamp."""
+    start = date(2026, 1, 1)
+    rows = []
+    for index in range(100):
+        feature_date = start + timedelta(days=index)
+        target_end = feature_date + timedelta(days=5)
+        rows.append({
+            "date": feature_date.isoformat(),
+            "target_end_date": target_end.isoformat(),
+            "features": [float(index), float(index % 7)],
+            "target_forward_excess_log_return": 0.001 * index,
+        })
+    result = walk_forward_ridge(rows, train_fraction=0.7, minimum_training_rows=20)
+    assert result["status"] == "ok"
+    for prediction in result["predictions"]:
+        assert prediction["last_training_target_end_date"] < prediction["date"]
