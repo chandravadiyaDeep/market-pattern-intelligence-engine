@@ -54,7 +54,8 @@ def add_event_features(
     # Labeled rows start after price-feature warm-up; include the latest feature date too.
     row_dates = [str(row["date"]) for row in prediction_dataset["rows"]]
     latest_date = str(prediction_dataset["latest_feature_row"]["date"])
-    all_dates = sorted(set(row_dates + [latest_date]))
+    # Use the full aligned price-session timeline, including feature warm-up sessions.
+    all_dates = sorted(set(prediction_dataset.get("session_dates", row_dates) + [latest_date]))
     index_by_date = {session_date: index for index, session_date in enumerate(all_dates)}
 
     event_feature_names = [
