@@ -44,7 +44,6 @@ def build_prediction_dataset(
 
     for index in range(max_lookback, len(dates) - horizon_sessions):
         trailing_stock = [float(stock_returns[j]) for j in range(index - volatility_window + 1, index + 1)]
-        trailing_market = [float(market_returns[j]) for j in range(index - volatility_window + 1, index + 1)]
         if any(stock_returns[j] is None or market_returns[j] is None for j in range(index - volatility_window + 1, index + 1)):
             continue
         volatility = stdev(trailing_stock) * sqrt(annualization_sessions)
