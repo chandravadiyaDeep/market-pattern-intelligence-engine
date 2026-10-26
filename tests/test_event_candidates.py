@@ -80,7 +80,7 @@ def test_unmatched_headline_is_not_reprocessed_forever(tmp_path):
             (source_type,title,url,published_at,first_seen_at,retrieved_at,content_hash,
              text_excerpt,created_at)
             VALUES (?,?,?,?,?,?,?,?,?)""",
-            ("news_rss", "Reliance launches a new consumer website",
+            ("news_rss", "Reliance opens a new consumer website",
              "https://example.com/website", "2026-10-20T09:00:00+00:00",
              "2026-10-20T09:01:00+00:00", "2026-10-20T09:01:00+00:00",
              "unmatched-test-hash", "A website launch with no event keywords.", "2026-10-20T09:01:00+00:00"),
