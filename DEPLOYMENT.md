@@ -1,99 +1,83 @@
-# Deployment guide — Vercel + Render + Supabase
+# Deployment guide — Vercel + optional Render (no Supabase Auth)
 
-This repository currently contains a **FastAPI research API**, not a finished web dashboard. Deploying it on Render makes the API reachable; Vercel should host a separate frontend project when one exists.
+## First: what is currently in this repository?
 
-## Important database status (read before deploying)
+This repository contains a Python FastAPI research API and its SQLite database layer. It does **not** currently contain a browser-ready frontend/dashboard that Vercel can deploy as a finished site.
 
-The current code in `src/market_engine/db.py` uses Python's built-in `sqlite3` and creates a local SQLite file. Adding Supabase environment variables does **not** migrate this code to PostgreSQL. Do not deploy this API expecting Supabase to store its research data until the database layer has been ported and tested against PostgreSQL.
+Your preference is:
+- **Browser-based site:** accessible in a normal browser, with no login/authentication for now.
+- **Vercel:** host the frontend once a frontend project is in the repository.
+- **Render:** host the Python API only if the browser site needs those API features.
+- **Supabase:** do not configure it now. No Supabase Auth is needed. The current code uses SQLite, not Supabase/PostgreSQL.
 
-For the initial stack, the intended roles are:
+Do not import this Python-only repository into Vercel expecting a dashboard to appear. Vercel is not a replacement runtime for this project's long-running Python API.
 
-- **Vercel:** frontend/dashboard (deploy the frontend project or repository that contains the actual frontend; this repository currently does not contain a Vercel-ready frontend project).
-- **Render:** long-running FastAPI API service, built from this repository's Dockerfile.
-- **Supabase:** managed PostgreSQL database, and optionally Supabase Auth for user accounts in a later phase.
+## Recommended path for a browser-only prototype
 
-If you need to deploy the current SQLite-based API before the PostgreSQL migration, use a Render persistent disk mounted at `/data` and set `MPIE_DATABASE_PATH=/data/mpie.sqlite3`. Render's filesystem is ephemeral unless persistent storage is configured. This temporary route uses Render storage, not Supabase Postgres.
+If the immediate goal is a browser-based site and you do not need data to be shared between browsers/devices:
+1. Build/deploy the frontend as a separate Vercel project (or add the frontend to this repository and set Vercel's Root Directory to its real app folder).
+2. Keep the initial version fully client-side where practical. Store temporary preferences in browser storage and let the user upload CSV files locally if needed.
+3. Do not add Supabase, authentication, a database, or Render until a required feature genuinely needs them.
+4. Be aware that browser-local data stays in that browser/device and may be cleared by the user; it is not shared cloud storage.
 
-## A. Create Supabase project
+**Current blocker:** a frontend/dashboard has not yet been added to this repository. The current FastAPI API's research endpoints and SQLite persistence cannot magically work in a static frontend without a server/API and data import.
 
-1. Open https://supabase.com/dashboard and create a project.
-2. Save the database password securely. Never commit it to GitHub or put it in browser code.
-3. Open **Connect** in the Supabase dashboard and copy the connection string that matches your network. Render services may be on IPv4-only networks, so if the direct connection does not work, select the **Session pooler** connection string in Supabase rather than constructing a hostname manually. Follow Supabase's current connection instructions: https://supabase.com/docs/guides/database/connecting-to-postgres.
-4. Keep the connection string private. A frontend must never receive the database password or a privileged server key.
+## Optional: deploy the current Python API on Render
 
-**Note:** this step creates the managed database, but the current SQLite schema and queries have not yet been converted to PostgreSQL. Do not set an unused `DATABASE_URL` and assume the application is using it.
-
-## B. Deploy the API on Render
-
-The repository already has a Dockerfile and binds Uvicorn to the platform-provided `PORT`.
+Use this only when the browser site needs server-side research features. The API currently uses SQLite (`src/market_engine/db.py`), so it needs persistent storage on Render.
 
 1. Open https://render.com and sign in.
-2. Choose **New → Web Service**, connect GitHub, and select `chandravadiyaDeep/market-pattern-intelligence-engine`.
-3. Choose **Docker** as the runtime/build method and use the root `Dockerfile`.
-4. Set the health check path to `/health`.
-5. For the current SQLite-based version, attach a persistent disk mounted at `/data`. Check current pricing first; persistent disks may require a paid Render service. Render disk docs: https://render.com/docs/disks.
-6. Under **Environment**, set:
-   - `MPIE_MODE=production`
-   - `MPIE_DATABASE_PATH=/data/mpie.sqlite3`
-   - `MPIE_API_KEY` = a generated secret of at least 32 characters
-7. Generate the secret on your Windows computer in PowerShell:
+2. Select **New → Web Service**, connect GitHub, and choose `chandravadiyaDeep/market-pattern-intelligence-engine`.
+3. Choose Docker and use the repository-root `Dockerfile`.
+4. Set the health-check path to `/health`.
+5. Attach a persistent disk mounted at `/data` and check Render's current pricing before proceeding: https://render.com/docs/disks.
+6. Add these environment variables:
+
+   | Name | Value |
+   |---|---|
+   | `MPIE_MODE` | `production` |
+   | `MPIE_DATABASE_PATH` | `/data/mpie.sqlite3` |
+   | `MPIE_API_KEY` | Strong random secret, at least 32 characters |
+
+   Generate a key in Windows PowerShell:
 
    ```powershell
-   # Generate a cryptographically strong API key; do not commit it.
+   # Generate a private API key. Keep it out of GitHub and frontend code.
    python -c "import secrets; print(secrets.token_urlsafe(48))"
    ```
 
-8. Copy the printed key directly into Render's environment variables. Do not send it in chat, commit it, or put it in frontend JavaScript.
-9. Deploy and wait for Render to report that the service is live.
+7. Generate the service's public URL and wait until the deploy finishes.
+8. Test the public health route:
 
-### Verify the Render API
+   ```powershell
+   # Replace this placeholder with your actual Render URL.
+   Invoke-RestMethod "https://YOUR-RENDER-SERVICE.onrender.com/health"
+   ```
 
-Replace the placeholder with your actual Render service URL:
+   A successful response should include `"status": "ok"`.
 
-```powershell
-# Public health check; expected JSON includes status = ok.
-Invoke-RestMethod "https://YOUR-RENDER-SERVICE.onrender.com/health"
+9. API docs will be available at `https://YOUR-RENDER-SERVICE.onrender.com/docs`. Use Swagger's **Authorize** control for API-key-protected routes.
 
-# Example authenticated request. Keep the key local and private.
-$headers = @{ "X-API-Key" = "PASTE-YOUR-KEY-LOCALLY" }
-Invoke-RestMethod "https://YOUR-RENDER-SERVICE.onrender.com/research-sources" -Headers $headers
-```
+### Important browser security warning
 
-Open `https://YOUR-RENDER-SERVICE.onrender.com/docs`, select **Authorize**, and enter the same API key to try protected routes. Treat the API key as a personal-access gate, not full user authentication.
+Do **not** place `MPIE_API_KEY` in frontend JavaScript or a `NEXT_PUBLIC_*` / `VITE_*` variable. Anyone can inspect a browser bundle and copy a key. A personal browser prototype can call only public, read-only endpoints, or use a server-side proxy/authentication layer before exposing protected API operations. The current API key is a simple personal-access gate, not multi-user authentication or per-user authorization.
 
-## C. Deploy a frontend on Vercel
+## Do we need Supabase?
 
-There is no Vercel-ready frontend in this repository at the moment. Do not import this Python-only repository as a Next.js project expecting a dashboard to appear.
+**Not for the current code.** The database implementation imports Python's built-in `sqlite3`, and it has not been migrated to PostgreSQL. Creating a Supabase project or setting a `DATABASE_URL` would not cause the API to use it.
 
-When the frontend project is ready:
+Consider Supabase later only if you need cloud PostgreSQL—for example, shared datasets or research records across deployments/devices. That would require a tested PostgreSQL migration and server-side credentials. Supabase Auth is optional and should remain disabled unless user accounts become a requirement. Never put database passwords or privileged Supabase keys in browser code.
 
-1. Open https://vercel.com and choose **Add New → Project**.
-2. Import the GitHub repository that contains the actual frontend.
-3. Select its framework preset and set the **Root Directory** to the frontend app directory (for example, `web` or `frontend`, only if that directory really exists in that repository).
-4. Add a frontend environment variable such as `NEXT_PUBLIC_API_BASE_URL` with the Render API base URL, for example `https://YOUR-RENDER-SERVICE.onrender.com`.
-5. Configure frontend requests to send `X-API-Key` only for a private personal prototype. **Do not bake a permanent private API key into `NEXT_PUBLIC_*` variables or browser JavaScript.** For a multi-user application, add server-side authentication/authorization and a secure server-side API proxy instead.
-6. Deploy and test a read-only route from the deployed frontend.
+## What deployment does not provide automatically
 
-Vercel's Git-connected deployments are documented at https://vercel.com/docs/deployments.
+Deploying the API does not load historical price data, verified point-in-time Nifty 50 membership, or corporate events. It also does not create a dashboard, schedule feed ingestion, create backups, add multi-user authentication, validate a profitable strategy, or execute live trades.
 
-## D. Connect the API to Supabase — required migration work
+Keep this SQLite API to one service instance. A persistent disk is not a backup; arrange separate backups if the database becomes valuable.
 
-The API currently uses SQLite-specific SQL and `sqlite3`. Before Supabase can be the actual database, the code needs a dedicated PostgreSQL migration, including:
+## Related links
 
-- Add a PostgreSQL driver and environment setting for the Supabase connection string.
-- Replace the SQLite connection/initialization layer with a PostgreSQL-compatible repository or database abstraction.
-- Migrate SQLite-specific schema details such as `INTEGER PRIMARY KEY AUTOINCREMENT`, placeholder syntax, and SQLite-specific query behavior.
-- Add and test schema migrations; do not rely on `init_db()` running SQLite DDL against Postgres.
-- Run tests against both the local test database and a temporary/isolated Postgres database before changing production.
-- Import existing approved research records explicitly; creating a Supabase project does not copy the local SQLite file into Postgres.
-- Keep the database password and any service-role key on the server only. If Supabase Auth is later enabled for users, enforce authorization on the backend and database rather than trusting a client-supplied user ID.
-
-Until this work is complete, **the deployed application uses SQLite on Render's disk** and Supabase is created but not used by the API data layer.
-
-## E. What is and is not ready
-
-Ready in the repository: FastAPI API, health endpoint, `/docs`, API-key check, Docker image, test/lint workflow.
-
-Not automatically supplied by deployment: Vercel dashboard UI, PostgreSQL-compatible database layer, historical market prices, verified historical Nifty 50 membership, corporate event imports, scheduled ingestion, multi-user authentication, automated backups, or evidence of a profitable trading strategy.
-
-Keep the Render service to one instance while using SQLite. Back up the database separately; a persistent disk is not a backup. The service is for research and paper simulation only and does not place live trades.
+- Vercel: https://vercel.com/
+- Vercel deployment docs: https://vercel.com/docs/deployments
+- Render: https://render.com/
+- Render persistent disks: https://render.com/docs/disks
+- Supabase is intentionally not part of the current deployment steps.
