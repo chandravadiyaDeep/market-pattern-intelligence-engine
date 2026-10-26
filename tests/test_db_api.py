@@ -428,3 +428,31 @@ def test_backtest_panel_api_uses_historical_membership_and_validates_dates(tmp_p
         params={"start_date": "not-a-date", "end_date": "2026-02-09", "source_name": "provider-test"},
     )
     assert invalid.status_code == 422
+
+
+def test_api_key_protects_deployed_routes_but_keeps_health_public(monkeypatch):
+    """Configured deployment credentials protect research data and appear in Swagger."""
+    import os
+
+    monkeypatch.setenv("MPIE_API_KEY", "a" * 40)
+    client = TestClient(app)
+    assert client.get("/health").status_code == 200
+    assert client.get("/research-sources").status_code == 401
+    authorized = client.get("/research-sources", headers={"X-API-Key": "a" * 40})
+    assert authorized.status_code == 200
+    schema = client.get("/openapi.json").json()
+    assert "ApiKeyAuth" in schema["components"]["securitySchemes"]
+    assert schema["security"] == [{"ApiKeyAuth": []}]
+
+
+def test_production_mode_requires_a_long_api_key(monkeypatch):
+    """Production startup must not silently expose an unprotected API."""
+    import pytest
+    from market_engine.api import enforce_production_configuration
+
+    monkeypatch.setenv("MPIE_MODE", "production")
+    monkeypatch.delenv("MPIE_API_KEY", raising=False)
+    with pytest.raises(RuntimeError, match="requires MPIE_API_KEY"):
+        enforce_production_configuration()
+    monkeypatch.setenv("MPIE_API_KEY", "b" * 40)
+    enforce_production_configuration()
