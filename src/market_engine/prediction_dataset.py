@@ -30,7 +30,7 @@ def build_prediction_dataset(
     if len(dates) <= max_lookback + horizon_sessions:
         return {
             "status": "insufficient_data", "reason": "Not enough aligned history for lookback and target horizon",
-            "feature_names": [], "rows": [], "horizon_sessions": horizon_sessions,
+            "feature_names": [], "rows": [], "horizon_sessions": horizon_sessions, "session_dates": dates,
         }
 
     stock = [float(stock_prices[date]) for date in dates]
@@ -83,6 +83,7 @@ def build_prediction_dataset(
     return {
         "status": "ok" if rows else "insufficient_data",
         "feature_names": feature_names,
+        "session_dates": dates,
         "horizon_sessions": horizon_sessions,
         "target_definition": "future stock log return minus future benchmark log return",
         "feature_cutoff": "close on row date; no future prices in features",
