@@ -8,6 +8,7 @@ from .evaluation import evaluate_binary_probabilities
 from .importers import import_events_csv
 from .feed_pipeline import ingest_feeds
 from .market_data_importer import import_prices_csv
+from .constituent_importer import import_constituents_csv
 from .event_candidates import classify_source_documents
 
 
