@@ -1,0 +1,64 @@
+# Starter aliases for headline matching. Expand from dated official Nifty 50 constituent files.
+# Matching is heuristic; every candidate still requires human verification.
+version: 1
+companies:
+  - symbol: RELIANCE
+    aliases: ["Reliance Industries", "Reliance"]
+  - symbol: TCS
+    aliases: ["Tata Consultancy Services", "TCS"]
+  - symbol: HDFCBANK
+    aliases: ["HDFC Bank"]
+  - symbol: ICICIBANK
+    aliases: ["ICICI Bank"]
+  - symbol: INFY
+    aliases: ["Infosys"]
+  - symbol: BHARTIARTL
+    aliases: ["Bharti Airtel", "Airtel"]
+  - symbol: ITC
+    aliases: ["ITC"]
+  - symbol: LT
+    aliases: ["Larsen & Toubro", "Larsen and Toubro", "L&T"]
+  - symbol: SBIN
+    aliases: ["State Bank of India", "SBI"]
+  - symbol: AXISBANK
+    aliases: ["Axis Bank"]
+  - symbol: KOTAKBANK
+    aliases: ["Kotak Mahindra Bank", "Kotak Bank"]
+  - symbol: HINDUNILVR
+    aliases: ["Hindustan Unilever", "HUL"]
+  - symbol: MARUTI
+    aliases: ["Maruti Suzuki"]
+  - symbol: TATAMOTORS
+    aliases: ["Tata Motors"]
+  - symbol: TITAN
+    aliases: ["Titan Company", "Titan"]
+  - symbol: SUNPHARMA
+    aliases: ["Sun Pharmaceutical", "Sun Pharma"]
+  - symbol: BAJFINANCE
+    aliases: ["Bajaj Finance"]
+  - symbol: WIPRO
+    aliases: ["Wipro"]
+  - symbol: HCLTECH
+    aliases: ["HCL Technologies", "HCLTech"]
+  - symbol: ADANIENT
+    aliases: ["Adani Enterprises"]
+  - symbol: ADANIPORTS
+    aliases: ["Adani Ports"]
+  - symbol: NTPC
+    aliases: ["NTPC"]
+  - symbol: POWERGRID
+    aliases: ["Power Grid Corporation", "PowerGrid"]
+  - symbol: TATASTEEL
+    aliases: ["Tata Steel"]
+  - symbol: JSWSTEEL
+    aliases: ["JSW Steel"]
+  - symbol: ULTRACEMCO
+    aliases: ["UltraTech Cement", "Ultratech"]
+  - symbol: ASIANPAINT
+    aliases: ["Asian Paints"]
+  - symbol: TECHM
+    aliases: ["Tech Mahindra"]
+  - symbol: ONGC
+    aliases: ["Oil and Natural Gas Corporation", "ONGC"]
+  - symbol: COALINDIA
+    aliases: ["Coal India"]
