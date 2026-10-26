@@ -33,6 +33,7 @@ Open the API explorer at http://127.0.0.1:8000/docs.
 - Point-in-time market features: daily returns, trailing momentum, annualized realized volatility and benchmark-relative returns.
 - General event-study engine that measures post-disclosure stock returns against a benchmark across multiple horizons, for any event category with verified timestamps and sufficient price history.
 - Experimental mathematical forecasting baseline using leakage-aware forward excess-return targets, standardized ridge regression, and expanding-window out-of-sample evaluation; includes fixed-taxonomy event-count features from official/corroborated disclosures using conservative point-in-time cutoffs.
+- Point-in-time cross-sectional backtest panel builder that joins dated constituent membership to same-source stock/benchmark prices, creates trailing price features, and labels future excess returns.
 - Brier score, log loss and chronological train/test splitting utilities.
 - Timestamped forecasts with outcomes recorded separately and immutable once resolved.
 - Paper-order ledger with explicitly simulated fills; no broker or live order placement.
@@ -90,7 +91,8 @@ Maintain source links in [resources/RESEARCH_SOURCES.md](resources/RESEARCH_SOUR
 - `GET /research-sources` (source-link catalog)
 - `GET /research/event-study?benchmark_symbol=NIFTY50&horizons=1,3,5,10,20` (official/corroborated event study)
 - `GET /research/predictive-baseline/TCS?benchmark_symbol=NIFTY50&horizon_sessions=5` (experimental price + verified-event baseline; requires sufficient aligned stock and benchmark history; excludes disclosures from the same feature date)
-- `GET /universe/constituents?as_of=2024-01-01` (historical membership intervals from imported data)\n- `GET /market-bars`
+- `GET /universe/constituents?as_of=2024-01-01` (historical membership intervals from imported data)
+- `GET /research/backtest-panel?start_date=2020-01-01&end_date=2025-12-31&source_name=your-provider` (point-in-time panel from imported bars and membership)\n- `GET /market-bars`
 - `GET /market-bars/{symbol}/features`
 - `POST /events` and `GET /events`
 - `POST /predictions` and `GET /predictions`
@@ -100,7 +102,7 @@ Maintain source links in [resources/RESEARCH_SOURCES.md](resources/RESEARCH_SOUR
 - `POST /paper-orders` and `GET /paper-orders`
 - `POST /paper-orders/{id}/fill` (simulated only)
 
-See [the mathematical framework](docs/MATHEMATICAL_FRAMEWORK.md) for return definitions, event-study formulas, ridge objective, assumptions, and validation gates. See [historical universe data guidance](docs/HISTORICAL_UNIVERSE.md) for membership CSV format, import commands, and point-in-time cautions.
+See [the mathematical framework](docs/MATHEMATICAL_FRAMEWORK.md) for return definitions, event-study formulas, ridge objective, assumptions, and validation gates. See [historical universe data guidance](docs/HISTORICAL_UNIVERSE.md) for membership CSV format, import commands, and point-in-time cautions. See [backtest dataset documentation](docs/BACKTEST_DATASET.md) for panel requirements, API parameters, and limitations.
 
 ## Research safeguards
 
