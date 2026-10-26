@@ -373,3 +373,58 @@ def test_constituent_universe_endpoint_filters_by_as_of_date(tmp_path, monkeypat
     assert {item["symbol"] for item in later.json()["items"]} == {"INFY"}
     invalid = client.get("/universe/constituents?as_of=not-a-date")
     assert invalid.status_code == 422
+
+
+def test_backtest_panel_api_uses_historical_membership_and_validates_dates(tmp_path, monkeypatch):
+    """The research API exposes the panel builder and returns only point-in-time members."""
+    from datetime import date, timedelta
+    from market_engine import backtest_dataset
+
+    db_file = tmp_path / "backtest-panel-api.sqlite3"
+    init_db(db_file)
+    monkeypatch.setattr(
+        backtest_dataset, "connect", lambda db_path=None: connect(db_file)
+    )
+    first_day = date(2026, 1, 1)
+    with connect(db_file) as conn:
+        for index in range(40):
+            day = (first_day + timedelta(days=index)).isoformat()
+            for symbol, price in (
+                ("NIFTY50", 100.0 + index * 0.5),
+                ("TCS", 50.0 + index * 0.3),
+            ):
+                conn.execute(
+                    """INSERT INTO market_bars
+                    (symbol,session_date,open,high,low,close,adjusted_close,volume,source_name,retrieved_at)
+                    VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                    (symbol, day, price, price * 1.01, price * 0.99, price, price,
+                     1000, "provider-test", "2026-10-25T00:00:00+00:00"),
+                )
+        conn.execute(
+            """INSERT INTO constituent_membership
+            (symbol,company_name,start_date,end_date,source_name,retrieved_at)
+            VALUES (?,?,?,?,?,?)""",
+            ("TCS", "Tata Consultancy Services", "2026-01-01", "2026-02-09",
+             "verified-test", "2026-10-25T00:00:00+00:00"),
+        )
+
+    client = TestClient(app)
+    response = client.get(
+        "/research/backtest-panel",
+        params={
+            "start_date": "2026-01-01", "end_date": "2026-02-09",
+            "source_name": "provider-test", "volatility_window": 5,
+            "momentum_windows": "2,5", "horizon_sessions": 3,
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "ok"
+    assert payload["row_count"] > 0
+    assert all(row["symbol"] == "TCS" for row in payload["rows"])
+    assert all(row["target_end_date"] <= "2026-02-09" for row in payload["rows"])
+    invalid = client.get(
+        "/research/backtest-panel",
+        params={"start_date": "not-a-date", "end_date": "2026-02-09", "source_name": "provider-test"},
+    )
+    assert invalid.status_code == 422
