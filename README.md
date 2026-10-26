@@ -32,7 +32,7 @@ Open the API explorer at http://127.0.0.1:8000/docs.
 - Transparent smoothed historical base-rate estimates.
 - Point-in-time market features: daily returns, trailing momentum, annualized realized volatility and benchmark-relative returns.
 - General event-study engine that measures post-disclosure stock returns against a benchmark across multiple horizons, for any event category with verified timestamps and sufficient price history.
-- Experimental mathematical forecasting baseline using leakage-aware forward excess-return targets, standardized ridge regression, and expanding-window out-of-sample evaluation.
+- Experimental mathematical forecasting baseline using leakage-aware forward excess-return targets, standardized ridge regression, and expanding-window out-of-sample evaluation; includes fixed-taxonomy event-count features from official/corroborated disclosures using conservative point-in-time cutoffs.
 - Brier score, log loss and chronological train/test splitting utilities.
 - Timestamped forecasts with outcomes recorded separately and immutable once resolved.
 - Paper-order ledger with explicitly simulated fills; no broker or live order placement.
@@ -86,7 +86,7 @@ Maintain source links in [resources/RESEARCH_SOURCES.md](resources/RESEARCH_SOUR
 - `GET /pipeline/feeds` (configuration only; does not trigger a network fetch)
 - `GET /research-sources` (source-link catalog)
 - `GET /research/event-study?benchmark_symbol=NIFTY50&horizons=1,3,5,10,20` (official/corroborated event study)
-- `GET /research/predictive-baseline/TCS?benchmark_symbol=NIFTY50&horizon_sessions=5` (experimental numeric baseline; requires sufficient aligned stock and benchmark history)
+- `GET /research/predictive-baseline/TCS?benchmark_symbol=NIFTY50&horizon_sessions=5` (experimental price + verified-event baseline; requires sufficient aligned stock and benchmark history; excludes disclosures from the same feature date)
 - `GET /market-bars`
 - `GET /market-bars/{symbol}/features`
 - `POST /events` and `GET /events`
