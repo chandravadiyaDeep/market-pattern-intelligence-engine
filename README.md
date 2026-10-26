@@ -79,6 +79,8 @@ Maintain source links in [resources/RESEARCH_SOURCES.md](resources/RESEARCH_SOUR
 
 - `GET /health`
 - `POST /sources` and `GET /sources`
+- `GET /event-candidates` (defaults to pending review)
+- `POST /event-candidates/{id}/review?decision=accept|reject` (accepted records remain unverified)
 - `GET /pipeline/feeds` (configuration only; does not trigger a network fetch)
 - `GET /research-sources` (source-link catalog)
 - `GET /market-bars`
