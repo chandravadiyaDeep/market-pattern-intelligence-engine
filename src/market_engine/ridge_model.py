@@ -119,6 +119,14 @@ def walk_forward_ridge(
             "training_rows": len(eligible_train_indices),
             "last_training_target_end_date": max(target_end_dates[i] for i in eligible_train_indices),
         })
+    if not predictions:
+        return {
+            "status": "insufficient_data",
+            "rows": len(rows),
+            "reason": "Purging forward labels left too few resolved training rows for an out-of-sample prediction.",
+            "predictions": [],
+            "minimum_training_rows": minimum_training_rows,
+        }
     actual = [item["actual"] for item in predictions]
     predicted = [item["predicted"] for item in predictions]
     baseline_errors = actual
