@@ -260,3 +260,38 @@ def test_event_study_includes_official_event_and_benchmark_relative_math(tmp_pat
     assert one_day["stock_return"] == pytest.approx(0.1)
     assert one_day["benchmark_return"] == pytest.approx(0.05)
     assert one_day["abnormal_return"] == pytest.approx(1.1 / 1.05 - 1.0)
+
+
+
+def test_event_study_endpoint_calculates_abnormal_returns_for_official_event(tmp_path, monkeypatch):
+    """A verified-source event and aligned price series produce a transparent estimate."""
+    db_file = tmp_path / "event-study-calculation.sqlite3"
+    monkeypatch.setattr(api_module, "connect", lambda: connect(db_file))
+    init_db(db_file)
+    with connect(db_file) as conn:
+        conn.execute(
+            """INSERT INTO events
+            (symbol,event_type,title,summary,disclosed_at,status,created_at)
+            VALUES (?,?,?,?,?,?,?)""",
+            ("TCS", "other", "Official-source test event", "synthetic test only",
+             "2026-01-01T18:00:00+00:00", "official", "2026-01-01T18:00:00+00:00"),
+        )
+        # Prices are synthetic unit-test fixtures, not real market observations.
+        for symbol, prices in {
+            "TCS": [100.0, 110.0, 121.0],
+            "NIFTY50": [100.0, 105.0, 110.25],
+        }.items():
+            for date, price in zip(["2026-01-01", "2026-01-02", "2026-01-05"], prices, strict=True):
+                conn.execute(
+                    """INSERT INTO market_bars
+                    (symbol,session_date,open,high,low,close,adjusted_close,volume,source_name,retrieved_at)
+                    VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                    (symbol, date, price, price, price, price, price, 1000, "test",
+                     f"{date}T00:00:00+00:00"),
+                )
+    response = TestClient(app).get("/research/event-study?benchmark_symbol=NIFTY50&horizons=1")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["events_analyzed"] == 1
+    assert payload["overall"]["1"]["observations"] == 1
+    assert payload["events"][0]["horizons"]["1"]["abnormal_return"] == pytest.approx(1.1 / 1.05 - 1)
