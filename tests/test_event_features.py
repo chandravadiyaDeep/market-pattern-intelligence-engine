@@ -43,8 +43,13 @@ def test_event_features_do_not_use_events_disclosed_after_feature_date():
         "symbol": "TCS", "event_type": "governance",
         "disclosed_at": dates[41] + "T09:00:00+05:30", "status": "corroborated",
     }
+    older_event = {
+        "symbol": "TCS", "event_type": "governance",
+        "disclosed_at": dates[10] + "T09:00:00+05:30", "status": "official",
+    }
 
-    result = add_event_features(dataset, [event], "TCS")
+    result = add_event_features(dataset, [event, older_event], "TCS")
     row = next(item for item in result["rows"] if item["date"] == feature_date)
     feature_index = {name: index for index, name in enumerate(result["feature_names"])}
     assert row["features"][feature_index["event_governance_count_5s"]] == 0.0
+    assert row["features"][feature_index["event_governance_count_60s"]] == 1.0
