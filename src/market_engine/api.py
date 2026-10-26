@@ -370,7 +370,7 @@ def research_predictive_baseline(
             AND disclosed_at IS NOT NULL ORDER BY disclosed_at ASC""",
             (normalized_symbol,),
         ).fetchall()
-    prices: dict[str, dict[str, float]] = {};
+    prices: dict[str, dict[str, float]] = {}
     for row in rows:
         prices.setdefault(str(row["symbol"]).strip().upper(), {})[row["session_date"]] = float(row["price"])
     if normalized_symbol not in prices or normalized_benchmark not in prices:
