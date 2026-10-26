@@ -79,7 +79,7 @@ CSV required columns: `symbol,event_type,title,summary`. Optional columns: `even
 
 ## Deployment
 
-This repository currently contains a FastAPI backend, not a finished frontend website. For the chosen Vercel + Render + Supabase plan, see [DEPLOYMENT.md](DEPLOYMENT.md). Render can host the Dockerized API; use a persistent disk mounted at `/data` while the current database layer still uses SQLite. Set `MPIE_MODE=production`, `MPIE_DATABASE_PATH=/data/mpie.sqlite3`, and a secret `MPIE_API_KEY` of at least 32 characters. The current SQLite database layer is not yet PostgreSQL-compatible, so Supabase is not used by the API until the documented database migration is implemented.
+This repository currently contains a FastAPI backend, **not a finished browser frontend/dashboard**. Your browser site should be hosted on Vercel once a frontend app exists. Render is optional and should host this Python API only if the frontend needs server-side research endpoints. Supabase and Supabase Auth are not required now: the current database layer uses SQLite and does not connect to Supabase. Follow [DEPLOYMENT.md](DEPLOYMENT.md) for the corrected Vercel-first plan.
 
 The deployment configuration does not provide historical market data, automatic feed scheduling, multi-user authentication, or a validated trading strategy. Do not commit local databases, API keys, or licensed data files.
 
