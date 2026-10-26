@@ -432,8 +432,6 @@ def test_backtest_panel_api_uses_historical_membership_and_validates_dates(tmp_p
 
 def test_api_key_protects_deployed_routes_but_keeps_health_public(monkeypatch):
     """Configured deployment credentials protect research data and appear in Swagger."""
-    import os
-
     monkeypatch.setenv("MPIE_API_KEY", "a" * 40)
     client = TestClient(app)
     assert client.get("/health").status_code == 200
