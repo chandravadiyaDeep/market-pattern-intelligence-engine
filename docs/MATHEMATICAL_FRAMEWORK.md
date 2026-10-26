@@ -57,3 +57,22 @@ The event-study mathematics is independent of event type. Earnings, regulation, 
 4. Run event studies with predeclared horizons and report missing data.
 5. Test robustness across time periods, symbols, sectors, and market regimes.
 6. Only then compare candidate predictive models against simple baselines.
+
+
+## 6. Experimental continuous-return baseline
+
+The first general numeric model predicts a declared target: the next-H-session stock log return minus the benchmark log return:
+
+y_(t,H) = ln(P_stock,t+H / P_stock,t) - ln(P_market,t+H / P_market,t)
+
+Its initial features are one-session stock and benchmark returns, their difference, 5/20-session momentum, and trailing annualized realized volatility. They are calculated using only prices available at the feature cutoff. The model does not assume a particular event category or direction.
+
+Ridge regression minimizes:
+
+J(w,b) = sum_i (y_i - b - z_i' w)^2 + lambda ||w||_2^2
+
+where z_i contains features standardized using the training-window means and standard deviations. The intercept is unpenalized. The positive regularization parameter lambda reduces coefficient variance when features are correlated. It does not guarantee better forecasts.
+
+Evaluation uses expanding-window chronological predictions and reports MAE/RMSE against a zero-excess-return baseline plus directional accuracy. A current point estimate is emitted only after enough historical rows exist to run the evaluation. The estimate is not a probability, and the model currently uses price-derived features only; event, news, social and macro features are not yet connected to it.
+
+Important caveats: the current expanding-window evaluation does not yet purge overlapping H-session labels between training and validation, so treat metrics as an early diagnostic rather than a final unbiased result. The next validation upgrade should use purged walk-forward splits with an embargo at least as long as the target horizon, plus a final untouched test period, transaction-cost sensitivity and regime breakdowns.
