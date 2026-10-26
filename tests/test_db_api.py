@@ -296,3 +296,40 @@ def test_event_study_endpoint_calculates_abnormal_returns_for_official_event(tmp
     assert payload["events_analyzed"] == 1
     assert payload["overall"]["1"]["observations"] == 1
     assert payload["events"][0]["horizons"]["1"]["abnormal_return"] == pytest.approx(1.1 / 1.05 - 1)
+
+
+
+def test_predictive_baseline_endpoint_returns_walk_forward_metrics(tmp_path, monkeypatch):
+    """The model endpoint trains on prior labels and returns an experimental estimate."""
+    from datetime import date, timedelta
+    from math import cos, exp, sin
+
+    db_file = tmp_path / "predictive-baseline.sqlite3"
+    monkeypatch.setattr(api_module, "connect", lambda: connect(db_file))
+    init_db(db_file)
+    current_date = date(2025, 1, 1)
+    market_price = 100.0
+    stock_price = 100.0
+    inserted = 0
+    with connect(db_file) as conn:
+        while inserted < 100:
+            if current_date.weekday() < 5:
+                market_price *= exp(0.0002 + 0.002 * sin(inserted / 3))
+                stock_price *= exp(0.0001 + 0.0015 * cos(inserted / 5) + 0.0008 * sin(inserted / 2))
+                for symbol, price in (("TCS", stock_price), ("NIFTY50", market_price)):
+                    conn.execute(
+                        """INSERT INTO market_bars
+                        (symbol,session_date,open,high,low,close,adjusted_close,volume,source_name,retrieved_at)
+                        VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                        (symbol, current_date.isoformat(), price, price, price, price, price,
+                         1000, "synthetic-test", f"{current_date.isoformat()}T00:00:00+00:00"),
+                    )
+                inserted += 1
+            current_date += timedelta(days=1)
+    response = TestClient(app).get("/research/predictive-baseline/TCS?horizon_sessions=5")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "ok"
+    assert payload["walk_forward_evaluation"]["out_of_sample_predictions"] > 0
+    assert payload["latest_estimate"]["model"] == "standardized_ridge_regression"
+    assert "not a trading recommendation" in payload["warning"]
