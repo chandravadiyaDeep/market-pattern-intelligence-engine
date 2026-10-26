@@ -1,7 +1,7 @@
-# Production container for the Market Pattern Intelligence Engine FastAPI API.
+# Docker image for the optional Render-hosted FastAPI API.
 FROM python:3.12-slim
 
-# Use unbuffered logs and keep image installation straightforward.
+# Keep logs visible and configure a persistent database path for Render.
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
@@ -10,7 +10,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Install runtime package and source resources.
+# Install the Python package and its runtime resources.
 COPY pyproject.toml README.md ./
 COPY src ./src
 COPY config ./config
@@ -19,8 +19,8 @@ COPY docs ./docs
 
 RUN python -m pip install --upgrade pip && python -m pip install .
 
-# For Render, mount a persistent disk at /data while the database uses SQLite.
+# Render persistent disks should be mounted at /data.
 RUN mkdir -p /data
 
-# Render provides PORT at runtime; keep 10000 as the local Docker default.
+# Render provides PORT; the fallback is useful for local Docker runs.
 CMD ["sh", "-c", "uvicorn market_engine.api:app --host 0.0.0.0 --port ${PORT:-10000}"]
