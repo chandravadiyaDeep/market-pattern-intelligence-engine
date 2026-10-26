@@ -131,4 +131,23 @@ def init_db(db_path: str | Path | None = None) -> None:
             simulated_fill_time TEXT,
             created_at TEXT NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS event_candidates (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            source_id INTEGER NOT NULL UNIQUE REFERENCES source_documents(id),
+            symbol TEXT NOT NULL,
+            event_type TEXT NOT NULL,
+            title TEXT NOT NULL,
+            summary TEXT NOT NULL DEFAULT '',
+            disclosed_at TEXT,
+            matched_alias TEXT NOT NULL,
+            matched_terms TEXT NOT NULL,
+            rule_strength INTEGER NOT NULL CHECK(rule_strength BETWEEN 1 AND 3),
+            classifier_version TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending_review'
+                CHECK(status IN ('pending_review','accepted','rejected')),
+            created_at TEXT NOT NULL,
+            reviewed_at TEXT
+        );
+        CREATE INDEX IF NOT EXISTS idx_event_candidates_status
+            ON event_candidates(status, disclosed_at);
         """)
