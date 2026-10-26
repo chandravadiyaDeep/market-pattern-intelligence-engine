@@ -150,4 +150,11 @@ def init_db(db_path: str | Path | None = None) -> None:
         );
         CREATE INDEX IF NOT EXISTS idx_event_candidates_status
             ON event_candidates(status, disclosed_at);
+        CREATE TABLE IF NOT EXISTS headline_triage (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            source_id INTEGER NOT NULL UNIQUE REFERENCES source_documents(id),
+            classifier_version TEXT NOT NULL,
+            matched INTEGER NOT NULL CHECK(matched IN (0,1)),
+            processed_at TEXT NOT NULL
+        );
         """)
