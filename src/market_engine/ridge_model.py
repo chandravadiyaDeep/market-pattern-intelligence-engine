@@ -97,15 +97,27 @@ def walk_forward_ridge(
     if split >= len(rows):
         split = len(rows) - 1
     predictions = []
-    # Refit on an expanding window; each target is predicted using earlier rows only.
+    target_end_dates = [str(row.get("target_end_date", row["date"])) for row in rows]
+    # Refit on an expanding window. Purge any earlier row whose forward label had not
+    # fully resolved strictly before the test feature date, preventing horizon overlap.
     for index in range(split, len(rows)):
-        model = fit_ridge(features[:index], targets[:index], ridge_alpha)
+        eligible_train_indices = [
+            train_index for train_index in range(index)
+            if target_end_dates[train_index] < dates[index]
+        ]
+        if len(eligible_train_indices) < minimum_training_rows:
+            continue
+        train_features = [features[train_index] for train_index in eligible_train_indices]
+        train_targets = [targets[train_index] for train_index in eligible_train_indices]
+        model = fit_ridge(train_features, train_targets, ridge_alpha)
         estimate = predict_ridge(model, features[index])
         predictions.append({
             "date": dates[index],
             "actual": targets[index],
             "predicted": estimate,
             "baseline_zero_prediction": 0.0,
+            "training_rows": len(eligible_train_indices),
+            "last_training_target_end_date": max(target_end_dates[i] for i in eligible_train_indices),
         })
     actual = [item["actual"] for item in predictions]
     predicted = [item["predicted"] for item in predictions]
@@ -123,6 +135,7 @@ def walk_forward_ridge(
         "method": "expanding_window_ridge_regression",
         "train_fraction": train_fraction,
         "minimum_training_rows": minimum_training_rows,
+        "purging": "training target_end_date must be strictly before each test feature date",
         "ridge_alpha": ridge_alpha,
         "training_rows_at_first_prediction": split,
         "out_of_sample_predictions": len(predictions),
