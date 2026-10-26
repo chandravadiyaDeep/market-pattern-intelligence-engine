@@ -221,3 +221,42 @@ def test_event_study_endpoint_requires_verified_events_and_price_history(tmp_pat
     assert "No forecast is generated" in payload["note"]
     invalid = client.get("/research/event-study?horizons=0,2")
     assert invalid.status_code == 422
+
+
+
+def test_event_study_includes_official_event_and_benchmark_relative_math(tmp_path, monkeypatch):
+    """Officially verified events are analyzed against aligned benchmark prices."""
+    db_file = tmp_path / "event-study-official.sqlite3"
+    monkeypatch.setattr(api_module, "connect", lambda: connect(db_file))
+    init_db(db_file)
+    with connect(db_file) as conn:
+        conn.execute(
+            """INSERT INTO events
+            (symbol,event_type,title,summary,disclosed_at,status,created_at)
+            VALUES (?,?,?,?,?,?,?)""",
+            ("TCS", "other", "Official test disclosure", "test", "2026-01-01T12:00:00+00:00",
+             "official", "2026-01-01T12:00:00+00:00"),
+        )
+        for symbol, prices in {
+            "TCS": [100.0, 110.0, 121.0],
+            "NIFTY50": [100.0, 105.0, 110.25],
+        }.items():
+            for session_date, price in zip(
+                ["2026-01-01", "2026-01-02", "2026-01-05"], prices, strict=True
+            ):
+                conn.execute(
+                    """INSERT INTO market_bars
+                    (symbol,session_date,open,high,low,close,adjusted_close,volume,source_name,retrieved_at)
+                    VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                    (symbol, session_date, price, price, price, price, price, 1000, "test",
+                     f"{session_date}T00:00:00+00:00"),
+                )
+    response = TestClient(app).get("/research/event-study?horizons=1,2")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["verified_events_loaded"] == 1
+    assert payload["events_analyzed"] == 1
+    one_day = payload["events"][0]["horizons"]["1"]
+    assert one_day["stock_return"] == pytest.approx(0.1)
+    assert one_day["benchmark_return"] == pytest.approx(0.05)
+    assert one_day["abnormal_return"] == pytest.approx(1.1 / 1.05 - 1.0)
