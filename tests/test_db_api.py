@@ -326,10 +326,21 @@ def test_predictive_baseline_endpoint_returns_walk_forward_metrics(tmp_path, mon
                     )
                 inserted += 1
             current_date += timedelta(days=1)
+        # Verified synthetic disclosure exercises the event-aware feature integration.
+        conn.execute(
+            """INSERT INTO events
+            (symbol,event_type,title,summary,disclosed_at,status,created_at)
+            VALUES (?,?,?,?,?,?,?)""",
+            ("TCS", "earnings", "Synthetic verified results", "Test-only event.",
+             "2025-03-03T09:00:00+05:30", "official", "2025-03-03T09:00:00+05:30"),
+        )
     response = TestClient(app).get("/research/predictive-baseline/TCS?horizon_sessions=5")
     assert response.status_code == 200
     payload = response.json()
     assert payload["status"] == "ok"
     assert payload["walk_forward_evaluation"]["out_of_sample_predictions"] > 0
     assert payload["latest_estimate"]["model"] == "standardized_ridge_regression"
+    assert payload["event_features_added"] is True
+    assert payload["verified_events_used"] == 1
+    assert "event_earnings_count_5s" in payload["feature_names"]
     assert "not a trading recommendation" in payload["warning"]
