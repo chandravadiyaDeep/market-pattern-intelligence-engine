@@ -67,3 +67,25 @@ def test_candidate_dry_run_does_not_write(tmp_path):
     assert result["candidates_inserted"] == 0
     with connect(db_file) as conn:
         assert conn.execute("SELECT COUNT(*) FROM event_candidates").fetchone()[0] == 0
+
+
+
+def test_unmatched_headline_is_not_reprocessed_forever(tmp_path):
+    """Non-candidates should be recorded as triaged to avoid repeated work."""
+    db_file = tmp_path / "unmatched.sqlite3"
+    init_db(db_file)
+    with connect(db_file) as conn:
+        conn.execute(
+            """INSERT INTO source_documents
+            (source_type,title,url,published_at,first_seen_at,retrieved_at,content_hash,
+             text_excerpt,created_at)
+            VALUES (?,?,?,?,?,?,?,?,?)""",
+            ("news_rss", "Reliance launches a new consumer website",
+             "https://example.com/website", "2026-10-20T09:00:00+00:00",
+             "2026-10-20T09:01:00+00:00", "2026-10-20T09:01:00+00:00",
+             "unmatched-test-hash", "A website launch with no event keywords.", "2026-10-20T09:01:00+00:00"),
+        )
+    first = classify_source_documents(db_file)
+    assert first["unmatched"] == 1
+    second = classify_source_documents(db_file)
+    assert second["documents_scanned"] == 0
