@@ -1,6 +1,9 @@
 """FastAPI endpoints for local research workflows."""
 from datetime import date, datetime
-from fastapi import FastAPI, HTTPException, Query
+import hmac
+import os
+from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi.responses import JSONResponse
 from .db import connect, init_db, now_iso, row_to_dict
 from .models import EventIn, PredictionIn, PaperOrderIn, SourceDocumentIn
 from .paper import create_paper_order, simulate_fill
@@ -11,6 +14,49 @@ app = FastAPI(
     version="0.1.0",
     description="Research-only API for dated events, auditable forecasts and paper simulation.",
 )
+
+# Public deployment safety: when MPIE_API_KEY is configured, require it for all
+# endpoints except health and the documentation assets. Never hard-code the key.
+_PUBLIC_PATHS = {"/health", "/docs", "/openapi.json", "/redoc"}
+
+
+@app.middleware("http")
+async def require_api_key(request: Request, call_next):
+    """Protect research data and write endpoints when a deployment API key is set."""
+    expected_key = os.getenv("MPIE_API_KEY", "").strip()
+    if expected_key and request.url.path not in _PUBLIC_PATHS:
+        supplied_key = request.headers.get("x-api-key", "")
+        if not hmac.compare_digest(supplied_key, expected_key):
+            return JSONResponse(status_code=401, content={"detail": "Missing or invalid X-API-Key"})
+    return await call_next(request)
+
+
+@app.on_event("startup")
+def enforce_production_configuration() -> None:
+    """Fail closed if a production deployment has no API key configured."""
+    mode = os.getenv("MPIE_MODE", "research").strip().lower()
+    api_key = os.getenv("MPIE_API_KEY", "").strip()
+    if mode == "production" and len(api_key) < 32:
+        raise RuntimeError("Production mode requires MPIE_API_KEY with at least 32 characters")
+
+
+_original_openapi = app.openapi
+
+
+def _openapi_with_api_key():
+    """Expose an API-key Authorize control in Swagger UI when authentication is enabled."""
+    schema = _original_openapi()
+    if os.getenv("MPIE_API_KEY", "").strip():
+        schema.setdefault("components", {}).setdefault("securitySchemes", {})["ApiKeyAuth"] = {
+            "type": "apiKey",
+            "in": "header",
+            "name": "X-API-Key",
+        }
+        schema["security"] = [{"ApiKeyAuth": []}]
+    return schema
+
+
+app.openapi = _openapi_with_api_key
 
 
 @app.on_event("startup")
