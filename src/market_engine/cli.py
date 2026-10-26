@@ -8,6 +8,7 @@ from .evaluation import evaluate_binary_probabilities
 from .importers import import_events_csv
 from .feed_pipeline import ingest_feeds
 from .market_data_importer import import_prices_csv
+from .event_candidates import classify_source_documents
 
 
 def run_demo() -> None:
@@ -27,10 +28,11 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Market Pattern Intelligence Engine")
     parser.add_argument(
         "command",
-        choices=["init-db", "demo", "import-events", "fetch-feeds", "import-prices"],
+        choices=["init-db", "demo", "import-events", "fetch-feeds", "import-prices", "classify-news"],
     )
     parser.add_argument("--file", help="CSV path required for import-events and import-prices")
     parser.add_argument("--source", default="manual_csv", help="Price-data source label for import-prices")
+    parser.add_argument("--aliases", default="config/company_aliases.yaml", help="Company alias YAML used by classify-news")
     parser.add_argument(
         "--config",
         default="config/research_sources.yaml",
@@ -56,6 +58,10 @@ def main() -> None:
         print(json.dumps(result, indent=2))
         if result["feeds_failed"]:
             raise SystemExit(1)
+    elif args.command == "classify-news":
+        init_db()
+        result = classify_source_documents(aliases_path=args.aliases, dry_run=args.dry_run)
+        print(json.dumps(result, indent=2))
     else:
         if not args.file:
             parser.error("--file is required when command is import-prices")
