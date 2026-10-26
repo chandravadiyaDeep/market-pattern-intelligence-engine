@@ -359,7 +359,7 @@ def research_predictive_baseline(
             rows.extend(conn.execute(
                 """SELECT symbol,session_date,COALESCE(adjusted_close,close) AS price
                 FROM market_bars WHERE symbol=?
-                ORDER BY session_date ASC LIMIT ?""",
+                ORDER BY session_date DESC LIMIT ?""",
                 (requested_symbol, limit),
             ).fetchall())
     prices: dict[str, dict[str, float]] = {}
