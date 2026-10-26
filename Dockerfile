@@ -1,7 +1,7 @@
-# Minimal production image for the Market Pattern Intelligence Engine API.
+# Production container for the Market Pattern Intelligence Engine FastAPI API.
 FROM python:3.12-slim
 
-# Avoid buffered logs and prevent bytecode clutter in the container.
+# Use unbuffered logs and keep image installation straightforward.
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
@@ -10,7 +10,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Install only runtime dependencies through the package metadata.
+# Install runtime package and source resources.
 COPY pyproject.toml README.md ./
 COPY src ./src
 COPY config ./config
@@ -19,8 +19,8 @@ COPY docs ./docs
 
 RUN python -m pip install --upgrade pip && python -m pip install .
 
-# Railway volume should be mounted at /data to persist SQLite data.
+# For Render, mount a persistent disk at /data while the database uses SQLite.
 RUN mkdir -p /data
 
-# Railway provides PORT at runtime; default to 8000 for local Docker runs.
-CMD ["sh", "-c", "uvicorn market_engine.api:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Render provides PORT at runtime; keep 10000 as the local Docker default.
+CMD ["sh", "-c", "uvicorn market_engine.api:app --host 0.0.0.0 --port ${PORT:-10000}"]
